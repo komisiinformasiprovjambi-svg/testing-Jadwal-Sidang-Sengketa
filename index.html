@@ -2517,10 +2517,11 @@ function openStatsModal(type) {
   sidangData.forEach(d => {
     if (!d.register) return;
     if (!registerMap[d.register]) {
-      registerMap[d.register] = { pemohon: d.pemohon, termohon: d.termohon, statuses: [], rows: 0 };
+      registerMap[d.register] = { pemohon: d.pemohon, termohon: d.termohon, statuses: [], agendas: [], rows: 0 };
     }
     registerMap[d.register].rows++;
     if (d.status) registerMap[d.register].statuses.push(d.status);
+    if (d.agenda) registerMap[d.register].agendas.push(d.agenda);
   });
 
   const perkaraDone  = new Set(Object.keys(registerMap).filter(r => registerMap[r].statuses.some(s => s.toLowerCase().includes('selesai') || s.toLowerCase().includes('putus'))));
@@ -2548,31 +2549,94 @@ function openStatsModal(type) {
   document.getElementById('statsModalSubtitle').textContent = subtitle;
 
   const body = document.getElementById('statsModalBody');
-  if (list.length === 0) {
-    body.innerHTML = '<div style="text-align:center;padding:32px 16px;color:var(--text-muted)">Tidak ada data</div>';
-  } else {
-    body.innerHTML = list.map((reg, i) => {
-      const info = registerMap[reg];
-      const statusText = perkaraDone.has(reg)
-        ? `<span style="color:#2e7d32;font-weight:700;font-size:11px">✓ Selesai</span>`
-        : `<span style="color:#e65100;font-weight:700;font-size:11px">● Aktif</span>`;
-      return `
-        <div class="stats-perkara-item" onclick="bukaRiwayatDariStats('${reg.replace(/'/g,"\\'")}')">
+
+  if (type === 'selesai') {
+    // Tentukan tipe putusan per perkara
+    function getPutusanType(reg) {
+      const agendas = (registerMap[reg].agendas || []).map(a => a.toLowerCase());
+      if (agendas.some(a => a.includes('sela'))) return 'sela';
+      if (agendas.some(a => a.includes('ajudikasi') || a.includes('akhir'))) return 'ajudikasi';
+      if (agendas.some(a => a.includes('putusan') && a.includes('mediasi'))) return 'mediasi';
+      return 'lainnya';
+    }
+
+    const byType = { sela: [], ajudikasi: [], mediasi: [], lainnya: [] };
+    list.forEach(reg => byType[getPutusanType(reg)].push(reg));
+
+    function renderPutusanList(regList) {
+      if (regList.length === 0) return '<div style="text-align:center;padding:24px 16px;color:var(--text-muted);font-size:13px">Tidak ada data</div>';
+      return regList.map((reg, i) => {
+        const info = registerMap[reg];
+        return `<div class="stats-perkara-item" onclick="bukaRiwayatDariStats('${reg.replace(/'/g,"\\'")}')">
           <span class="stats-perkara-num">${i+1}</span>
           <div class="stats-perkara-info">
             <div class="stats-perkara-register">${reg}</div>
             <div class="stats-perkara-para">${info.pemohon || '-'} vs ${info.termohon || '-'}</div>
           </div>
-          ${statusText}
           <span class="stats-perkara-arrow">›</span>
         </div>`;
-    }).join('');
+      }).join('');
+    }
+
+    body.innerHTML = `
+      <div style="display:flex;gap:8px;flex-wrap:wrap;padding:0 0 12px;border-bottom:1px solid var(--border);margin-bottom:12px">
+        <button class="tab-btn-sub active" style="font-size:12px" onclick="filterPutusanModal('semua',this)">Semua (${list.length})</button>
+        <button class="tab-btn-sub" style="font-size:12px" onclick="filterPutusanModal('sela',this)">Putusan Sela (${byType.sela.length})</button>
+        <button class="tab-btn-sub" style="font-size:12px" onclick="filterPutusanModal('ajudikasi',this)">Putusan Ajudikasi/Akhir (${byType.ajudikasi.length})</button>
+        <button class="tab-btn-sub" style="font-size:12px" onclick="filterPutusanModal('mediasi',this)">Putusan Mediasi (${byType.mediasi.length})</button>
+      </div>
+      <div id="putusanModalList">${renderPutusanList(list)}</div>
+    `;
+
+    // Simpan data ke dataset untuk filter
+    body.dataset.putusanSemua = JSON.stringify(list);
+    body.dataset.putusanSela  = JSON.stringify(byType.sela);
+    body.dataset.putusanAjudikasi = JSON.stringify(byType.ajudikasi);
+    body.dataset.putusanMediasi = JSON.stringify(byType.mediasi);
+    body.dataset.registerMap = JSON.stringify(registerMap);
+
+    window._putusanRenderList = renderPutusanList;
+    window._putusanRegisterMap = registerMap;
+
+  } else {
+    if (list.length === 0) {
+      body.innerHTML = '<div style="text-align:center;padding:32px 16px;color:var(--text-muted)">Tidak ada data</div>';
+    } else {
+      body.innerHTML = list.map((reg, i) => {
+        const info = registerMap[reg];
+        const statusText = perkaraDone.has(reg)
+          ? `<span style="color:#2e7d32;font-weight:700;font-size:11px">✓ Selesai</span>`
+          : `<span style="color:#e65100;font-weight:700;font-size:11px">● Aktif</span>`;
+        return `
+          <div class="stats-perkara-item" onclick="bukaRiwayatDariStats('${reg.replace(/'/g,"\\\'")}')">
+            <span class="stats-perkara-num">${i+1}</span>
+            <div class="stats-perkara-info">
+              <div class="stats-perkara-register">${reg}</div>
+              <div class="stats-perkara-para">${info.pemohon || '-'} vs ${info.termohon || '-'}</div>
+            </div>
+            ${statusText}
+            <span class="stats-perkara-arrow">›</span>
+          </div>`;
+      }).join('');
+    }
   }
 
   document.getElementById('statsModalOverlay').classList.add('open');
   history.pushState({ modal: 'stats' }, '');
 }
 
+function filterPutusanModal(tipe, btn) {
+  document.querySelectorAll('#statsModalBody .tab-btn-sub').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const body = document.getElementById('statsModalBody');
+  let regList;
+  if (tipe === 'semua')     regList = JSON.parse(body.dataset.putusanSemua || '[]');
+  else if (tipe === 'sela') regList = JSON.parse(body.dataset.putusanSela  || '[]');
+  else if (tipe === 'ajudikasi') regList = JSON.parse(body.dataset.putusanAjudikasi || '[]');
+  else if (tipe === 'mediasi')   regList = JSON.parse(body.dataset.putusanMediasi || '[]');
+  else regList = [];
+  document.getElementById('putusanModalList').innerHTML = window._putusanRenderList(regList);
+}
 function bukaRiwayatDariStats(register) {
   closeStatsModalDirect();
   switchPage('riwayat');
@@ -2772,6 +2836,7 @@ window.openModal        = openModal;
 window.closeModal       = closeModal;
 window.closeModalDirect = closeModalDirect;
 window.openStatsModal   = openStatsModal;
+window.filterPutusanModal = filterPutusanModal;
 window.closeStatsModal  = closeStatsModal;
 window.closeStatsModalDirect = closeStatsModalDirect;
 window.bukaRiwayatDariStats  = bukaRiwayatDariStats;
