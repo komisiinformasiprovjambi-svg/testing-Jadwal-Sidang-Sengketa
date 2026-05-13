@@ -792,7 +792,7 @@ function formJadwalFields(data = {}) {
         <label>Agenda *</label>
         <select id="f_agenda">
           <option value="">Pilih agenda...</option>
-          ${['Pemeriksaan Awal','Mediasi','Sidang Lanjutan','Putusan'].map(a => `<option ${data.agenda===a?'selected':''}>${a}</option>`).join('')}
+          ${['Pemeriksaan Awal','Mediasi','Sidang Lanjutan','Putusan Sela','Putusan Ajudikasi/Akhir','Putusan Mediasi'].map(a => `<option ${data.agenda===a?'selected':''}>${a}</option>`).join('')}
         </select>
       </div>
     </div>
@@ -863,9 +863,10 @@ async function renderDaftarJadwalPetugas() {
     </div>
   `;
   try {
-    const snap = await getDocs(query(collection(db, 'jadwal_sidang'), orderBy('tanggal', 'desc')));
+    const snap = await getDocs(collection(db, 'jadwal_sidang'));
     const jadwal = [];
     snap.forEach(d => jadwal.push({ id: d.id, ...d.data() }));
+    jadwal.sort((a, b) => new Date(b.tanggal||0) - new Date(a.tanggal||0));
     if (jadwal.length === 0) {
       document.getElementById('jadwalPetugasTable').innerHTML = `<div class="empty-state"><p>Belum ada jadwal.</p></div>`;
       return;
@@ -986,7 +987,10 @@ window.saveEditJadwal = async function() {
 // ════════════════════════════════════
 async function renderAdmin(main) {
   main.innerHTML = `
-    <div class="page-title">Dashboard Admin</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="page-title">Dashboard Admin</div>
+      <a href="index.html" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--accent-light);color:var(--accent);border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;transition:background 0.2s" onmouseover="this.style.background='#c8dece'" onmouseout="this.style.background='var(--accent-light)'">← Jadwal Publik</a>
+    </div>
     <div class="page-sub">Kelola seluruh data sistem</div>
     <span class="role-badge admin">🔑 Administrator</span>
     <div class="admin-tabs">
@@ -1129,9 +1133,10 @@ async function loadAdminJadwal() {
 
 async function refreshAdminJadwalTable() {
   try {
-    const snap = await getDocs(query(collection(db, 'jadwal_sidang'), orderBy('tanggal', 'desc')));
+    const snap = await getDocs(collection(db, 'jadwal_sidang'));
     const jadwal = [];
     snap.forEach(d => jadwal.push({ id: d.id, ...d.data() }));
+    jadwal.sort((a, b) => new Date(b.tanggal||0) - new Date(a.tanggal||0));
     if (jadwal.length === 0) {
       document.getElementById('jadwalTable').innerHTML = `<div class="empty-state"><p>Belum ada jadwal.</p></div>`;
       return;

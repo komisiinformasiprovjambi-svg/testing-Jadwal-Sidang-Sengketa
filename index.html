@@ -264,6 +264,23 @@
     color: #fff;
   }
 
+  /* Putusan sub-filter */
+  .putusan-sub-filter {
+    display: none; flex-wrap: wrap; gap: 8px;
+    padding: 10px 0 4px 0; margin-top: 4px;
+    border-top: 1px dashed var(--border);
+    animation: subFadeIn 0.15s ease;
+  }
+  .putusan-sub-filter.open { display: flex; }
+  @keyframes subFadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+  .tab-btn-sub {
+    padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1.5px solid var(--border); background: var(--surface);
+    color: var(--text-secondary); transition: all 0.2s; font-family: 'DM Sans', sans-serif;
+  }
+  .tab-btn-sub:hover { border-color: var(--accent-mid); color: var(--accent); }
+  .tab-btn-sub.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
   /* ── CARD GRID ── */
   .card-grid {
     display: grid;
@@ -1735,7 +1752,14 @@
       <button class="tab-btn" onclick="setFilter('Pemeriksaan Awal', this)">Pemeriksaan Awal</button>
       <button class="tab-btn" onclick="setFilter('Mediasi', this)">Mediasi</button>
       <button class="tab-btn" onclick="setFilter('Sidang Lanjutan', this)">Sidang Lanjutan</button>
-      <button class="tab-btn" onclick="setFilter('Putusan', this)">Putusan</button>
+      <button class="tab-btn" id="btnPutusan" onclick="togglePutusanSub(this)">Putusan ▾</button>
+    </div>
+    <!-- PUTUSAN SUB-FILTER -->
+    <div class="putusan-sub-filter" id="putusanSubFilter">
+      <button class="tab-btn-sub active" onclick="setPutusanSub('putusan', this)">Semua Putusan</button>
+      <button class="tab-btn-sub" onclick="setPutusanSub('Putusan Sela', this)">Putusan Sela</button>
+      <button class="tab-btn-sub" onclick="setPutusanSub('Putusan Ajudikasi', this)">Putusan Ajudikasi/Akhir</button>
+      <button class="tab-btn-sub" onclick="setPutusanSub('Putusan Mediasi', this)">Putusan Mediasi</button>
     </div>
 
     <!-- CARD GRID -->
@@ -2247,6 +2271,37 @@ function setFilter(val, btn) {
   activeFilter = val;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  // Sembunyikan sub-filter putusan kalau bukan tombol putusan
+  document.getElementById('putusanSubFilter').classList.remove('open');
+  document.getElementById('btnPutusan').textContent = 'Putusan ▾';
+  filterCards();
+}
+
+function togglePutusanSub(btn) {
+  const sub = document.getElementById('putusanSubFilter');
+  const isOpen = sub.classList.contains('open');
+  // Deactivate semua tab-btn dulu
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  if (isOpen) {
+    sub.classList.remove('open');
+    btn.textContent = 'Putusan ▾';
+    activeFilter = 'all';
+    document.querySelector('.tab-btn').classList.add('active'); // Semua
+  } else {
+    sub.classList.add('open');
+    btn.classList.add('active');
+    btn.textContent = 'Putusan ▲';
+    // Default ke semua putusan
+    activeFilter = 'putusan';
+    document.querySelector('#putusanSubFilter .tab-btn-sub').classList.add('active');
+  }
+  filterCards();
+}
+
+function setPutusanSub(val, btn) {
+  activeFilter = val;
+  document.querySelectorAll('.tab-btn-sub').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
   filterCards();
 }
 
@@ -2265,7 +2320,9 @@ function filterCards() {
   const matchBase = d => {
     const matchSearch = !q || [d.register, d.pemohon, d.termohon, d.majelis, d.mediator, d.panitera, d.agenda, d.status]
       .some(v => (v || '').toLowerCase().includes(q));
-    const matchFilter = activeFilter === 'all' || (d.agenda || '').toLowerCase().includes(activeFilter.toLowerCase());
+    const matchFilter = activeFilter === 'all'
+      || (activeFilter === 'putusan' && (d.agenda || '').toLowerCase().includes('putusan'))
+      || (activeFilter !== 'all' && activeFilter !== 'putusan' && (d.agenda || '').toLowerCase().includes(activeFilter.toLowerCase()));
     return matchSearch && matchFilter;
   };
 
@@ -2709,6 +2766,8 @@ document.head.appendChild(styleEl);
 /* ── Expose fungsi ke window (diperlukan karena pakai type="module") ── */
 window.filterCards      = filterCards;
 window.setFilter        = setFilter;
+window.togglePutusanSub = togglePutusanSub;
+window.setPutusanSub    = setPutusanSub;
 window.togglePast       = togglePast;
 window.openModal        = openModal;
 window.closeModal       = closeModal;
