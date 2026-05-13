@@ -2553,10 +2553,12 @@ function openStatsModal(type) {
   if (type === 'selesai') {
     // Tentukan tipe putusan per perkara
     function getPutusanType(reg) {
-      const agendas = (registerMap[reg].agendas || []).map(a => a.toLowerCase());
-      if (agendas.some(a => a.includes('sela'))) return 'sela';
-      if (agendas.some(a => a.includes('ajudikasi') || a.includes('akhir'))) return 'ajudikasi';
-      if (agendas.some(a => a.includes('putusan') && a.includes('mediasi'))) return 'mediasi';
+      const agendas  = (registerMap[reg].agendas  || []).map(a => a.toLowerCase());
+      const statuses = (registerMap[reg].statuses || []).map(s => s.toLowerCase());
+      const all = [...agendas, ...statuses];
+      if (all.some(a => a.includes('sela'))) return 'sela';
+      if (all.some(a => a.includes('ajudikasi') || a.includes('akhir'))) return 'ajudikasi';
+      if (all.some(a => a.includes('putusan') && a.includes('mediasi'))) return 'mediasi';
       return 'lainnya';
     }
 
@@ -2584,6 +2586,7 @@ function openStatsModal(type) {
         <button class="tab-btn-sub" style="font-size:12px" onclick="filterPutusanModal('sela',this)">Putusan Sela (${byType.sela.length})</button>
         <button class="tab-btn-sub" style="font-size:12px" onclick="filterPutusanModal('ajudikasi',this)">Putusan Ajudikasi/Akhir (${byType.ajudikasi.length})</button>
         <button class="tab-btn-sub" style="font-size:12px" onclick="filterPutusanModal('mediasi',this)">Putusan Mediasi (${byType.mediasi.length})</button>
+        ${byType.lainnya.length > 0 ? `<button class="tab-btn-sub" style="font-size:12px" onclick="filterPutusanModal('lainnya',this)">Putusan Lainnya (${byType.lainnya.length})</button>` : ''}
       </div>
       <div id="putusanModalList">${renderPutusanList(list)}</div>
     `;
@@ -2593,6 +2596,7 @@ function openStatsModal(type) {
     body.dataset.putusanSela  = JSON.stringify(byType.sela);
     body.dataset.putusanAjudikasi = JSON.stringify(byType.ajudikasi);
     body.dataset.putusanMediasi = JSON.stringify(byType.mediasi);
+    body.dataset.putusanLainnya = JSON.stringify(byType.lainnya);
     body.dataset.registerMap = JSON.stringify(registerMap);
 
     window._putusanRenderList = renderPutusanList;
@@ -2634,6 +2638,7 @@ function filterPutusanModal(tipe, btn) {
   else if (tipe === 'sela') regList = JSON.parse(body.dataset.putusanSela  || '[]');
   else if (tipe === 'ajudikasi') regList = JSON.parse(body.dataset.putusanAjudikasi || '[]');
   else if (tipe === 'mediasi')   regList = JSON.parse(body.dataset.putusanMediasi || '[]');
+  else if (tipe === 'lainnya')   regList = JSON.parse(body.dataset.putusanLainnya || '[]');
   else regList = [];
   document.getElementById('putusanModalList').innerHTML = window._putusanRenderList(regList);
 }
