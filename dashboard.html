@@ -994,9 +994,9 @@ async function renderAdmin(main) {
     <div class="page-sub">Kelola seluruh data sistem</div>
     <span class="role-badge admin">🔑 Administrator</span>
     <div class="admin-tabs">
-      <div class="admin-tab active" onclick="adminTab('users', this)">👥 Kelola User</div>
-      <div class="admin-tab" onclick="adminTab('jadwal', this)">📅 Jadwal Sidang</div>
-      <div class="admin-tab" onclick="adminTab('catatan', this)">📝 Semua Catatan</div>
+      <div class="admin-tab active" onclick="window.adminTab('users', this)">👥 Kelola User</div>
+      <div class="admin-tab" onclick="window.adminTab('jadwal', this)">📅 Jadwal Sidang</div>
+      <div class="admin-tab" onclick="window.adminTab('catatan', this)">📝 Semua Catatan</div>
     </div>
     <div id="adminContent"></div>
   `;
@@ -1006,9 +1006,15 @@ async function renderAdmin(main) {
 window.adminTab = async function(tab, el) {
   document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  if (tab === 'users') await loadAdminUsers();
-  else if (tab === 'jadwal') await loadAdminJadwal();
-  else if (tab === 'catatan') await loadAdminCatatan();
+  const cont = document.getElementById('adminContent');
+  cont.innerHTML = `<div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><p>Memuat...</p></div>`;
+  try {
+    if (tab === 'users') await loadAdminUsers();
+    else if (tab === 'jadwal') await loadAdminJadwal();
+    else if (tab === 'catatan') await loadAdminCatatan();
+  } catch(e) {
+    cont.innerHTML = `<div class="empty-state"><p>⚠️ Gagal: ${e.message}</p></div>`;
+  }
 };
 
 async function loadAdminUsers() {

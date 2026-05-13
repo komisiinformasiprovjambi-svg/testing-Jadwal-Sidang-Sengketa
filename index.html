@@ -1752,14 +1752,14 @@
       <button class="tab-btn" onclick="setFilter('Pemeriksaan Awal', this)">Pemeriksaan Awal</button>
       <button class="tab-btn" onclick="setFilter('Mediasi', this)">Mediasi</button>
       <button class="tab-btn" onclick="setFilter('Sidang Lanjutan', this)">Sidang Lanjutan</button>
-      <button class="tab-btn" id="btnPutusan" onclick="togglePutusanSub(this)">Putusan ▾</button>
+      <button class="tab-btn" id="btnPutusan" onclick="window.togglePutusanSub(this)">Putusan ▾</button>
     </div>
     <!-- PUTUSAN SUB-FILTER -->
-    <div class="putusan-sub-filter" id="putusanSubFilter">
-      <button class="tab-btn-sub active" onclick="setPutusanSub('putusan', this)">Semua Putusan</button>
-      <button class="tab-btn-sub" onclick="setPutusanSub('Putusan Sela', this)">Putusan Sela</button>
-      <button class="tab-btn-sub" onclick="setPutusanSub('Putusan Ajudikasi', this)">Putusan Ajudikasi/Akhir</button>
-      <button class="tab-btn-sub" onclick="setPutusanSub('Putusan Mediasi', this)">Putusan Mediasi</button>
+    <div id="putusanSubFilter" style="display:none;flex-wrap:wrap;gap:8px;padding:10px 0 4px;margin-top:4px;border-top:1px dashed var(--border)">
+      <button class="tab-btn-sub active" onclick="window.setPutusanSub('putusan', this)">Semua Putusan</button>
+      <button class="tab-btn-sub" onclick="window.setPutusanSub('Putusan Sela', this)">Putusan Sela</button>
+      <button class="tab-btn-sub" onclick="window.setPutusanSub('Putusan Ajudikasi', this)">Putusan Ajudikasi/Akhir</button>
+      <button class="tab-btn-sub" onclick="window.setPutusanSub('Putusan Mediasi', this)">Putusan Mediasi</button>
     </div>
 
     <!-- CARD GRID -->
@@ -2272,28 +2272,27 @@ function setFilter(val, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   // Sembunyikan sub-filter putusan kalau bukan tombol putusan
-  document.getElementById('putusanSubFilter').classList.remove('open');
+  document.getElementById('putusanSubFilter').style.display = 'none';
   document.getElementById('btnPutusan').textContent = 'Putusan ▾';
   filterCards();
 }
 
 function togglePutusanSub(btn) {
   const sub = document.getElementById('putusanSubFilter');
-  const isOpen = sub.classList.contains('open');
-  // Deactivate semua tab-btn dulu
+  const isOpen = sub.style.display === 'flex';
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   if (isOpen) {
-    sub.classList.remove('open');
+    sub.style.display = 'none';
     btn.textContent = 'Putusan ▾';
     activeFilter = 'all';
-    document.querySelector('.tab-btn').classList.add('active'); // Semua
+    document.querySelector('.tab-btn').classList.add('active');
   } else {
-    sub.classList.add('open');
+    sub.style.display = 'flex';
     btn.classList.add('active');
     btn.textContent = 'Putusan ▲';
-    // Default ke semua putusan
     activeFilter = 'putusan';
-    document.querySelector('#putusanSubFilter .tab-btn-sub').classList.add('active');
+    document.querySelectorAll('.tab-btn-sub').forEach(b => b.classList.remove('active'));
+    document.querySelector('.tab-btn-sub').classList.add('active');
   }
   filterCards();
 }
