@@ -1119,21 +1119,48 @@ window.createUser = async function() {
   if (!nama || !email || !pass || !role) { showAdminAlert('error', 'Semua kolom wajib diisi.'); return; }
   if (pass.length < 6) { showAdminAlert('error', 'Password minimal 6 karakter.'); return; }
 
-  // Buat user via Anthropic API proxy (kita pakai Cloud Function workaround)
-  // Karena client-side Firebase Auth tidak bisa buat user lain,
-  // kita simpan dulu ke collection 'pending_users' lalu admin approve
+  const btn = document.querySelector('button[onclick="createUser()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Membuat akun...'; }
+
   try {
-    await addDoc(collection(db, 'pending_users'), {
-      nama, email, password: pass, role,
+    // Buat user via Firebase Auth REST API (tidak logout admin)
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pass, returnSecureToken: false })
+      }
+    );
+    const data = await res.json();
+    if (data.error) {
+      const msg = {
+        'EMAIL_EXISTS': 'Email sudah terdaftar.',
+        'INVALID_EMAIL': 'Format email tidak valid.',
+        'WEAK_PASSWORD : Password should be at least 6 characters': 'Password minimal 6 karakter.'
+      }[data.error.message] || data.error.message;
+      showAdminAlert('error', msg);
+      return;
+    }
+
+    const uid = data.localId;
+
+    // Simpan data user ke Firestore
+    await setDoc(doc(db, 'users', uid), {
+      nama, email, role,
       createdAt: new Date().toISOString(),
-      createdBy: currentUser.uid,
-      status: 'pending'
+      createdBy: currentUser.uid
     });
-    showAdminAlert('success', `✓ Permintaan akun untuk ${nama} (${email}) telah disimpan. Gunakan Firebase Console → Authentication → Add User untuk menyelesaikan pembuatan akun, lalu salin UID-nya ke collection "users".`);
+
+    showAdminAlert('success', `✓ Akun ${nama} (${email}) berhasil dibuat! Bisa langsung login.`);
     ['u_nama','u_email','u_pass'].forEach(f => document.getElementById(f).value = '');
     document.getElementById('u_role').value = '';
+    await loadUserTable();
+
   } catch(e) {
-    showAdminAlert('error', 'Gagal: ' + e.message);
+    showAdminAlert('error', 'Gagal membuat akun: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '+ Buat Akun'; }
   }
 };
 
