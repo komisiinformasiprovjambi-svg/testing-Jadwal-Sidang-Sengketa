@@ -272,6 +272,7 @@
   .btn-edit-jadwal:hover { background: #c8dece; }
   #editJadwalModal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center; padding:16px; }
   #editJadwalModal.open { display:flex; }
+  #detailPerkaraModal.open { display:flex; }
   .edit-jadwal-card { background:var(--surface); border-radius:var(--radius); width:100%; max-width:620px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-lg); }
   .edit-jadwal-head { padding:20px 24px 16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
   .edit-jadwal-head h3 { font-family:'Lora',serif; font-size:16px; font-weight:700; }
@@ -382,6 +383,20 @@
       <button class="btn-cancel" onclick="closeModal()">Batal</button>
       <button class="btn-save" id="btnSave" onclick="saveCatatan()">Simpan</button>
     </div>
+  </div>
+</div>
+
+<!-- MODAL DETAIL PERKARA -->
+<div id="detailPerkaraModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--surface);border-radius:var(--radius);width:100%;max-width:680px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg)">
+    <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--surface);z-index:1">
+      <div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px">Detail Perkara</div>
+        <h3 style="font-family:'Lora',serif;font-size:16px;font-weight:700" id="detailPerkaraTitle">–</h3>
+      </div>
+      <button class="modal-close" onclick="closeDetailPerkara()">✕</button>
+    </div>
+    <div style="padding:20px 24px" id="detailPerkaraBody"></div>
   </div>
 </div>
 
@@ -1099,14 +1114,25 @@ window.deleteUser = async function(uid, nama) {
 
 async function loadAdminJadwal() {
   const cont = document.getElementById('adminContent');
-  cont.innerHTML = `<div class="alert" id="adminAlert"></div><div class="table-wrap" id="jadwalTable"><div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><p>Memuat...</p></div></div>`;
+  cont.innerHTML = `
+    <div class="alert" id="adminAlert"></div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <button class="btn-submit" style="padding:10px 20px;font-size:14px" onclick="adminTambahJadwal()">+ Tambah Jadwal</button>
+    </div>
+    <div class="table-wrap" id="jadwalTable">
+      <div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><p>Memuat...</p></div>
+    </div>
+  `;
+  await refreshAdminJadwalTable();
+}
+
+async function refreshAdminJadwalTable() {
   try {
-    const snap = await getDocs(collection(db, 'jadwal_sidang'));
+    const snap = await getDocs(query(collection(db, 'jadwal_sidang'), orderBy('tanggal', 'desc')));
     const jadwal = [];
     snap.forEach(d => jadwal.push({ id: d.id, ...d.data() }));
-    jadwal.sort((a,b) => new Date(b.tanggal) - new Date(a.tanggal));
     if (jadwal.length === 0) {
-      document.getElementById('jadwalTable').innerHTML = `<div class="empty-state"><p>Belum ada jadwal di Firestore.</p></div>`;
+      document.getElementById('jadwalTable').innerHTML = `<div class="empty-state"><p>Belum ada jadwal.</p></div>`;
       return;
     }
     document.getElementById('jadwalTable').innerHTML = `
@@ -1115,21 +1141,164 @@ async function loadAdminJadwal() {
         <tbody>
           ${jadwal.map(j => `
             <tr>
-              <td><strong>${j.register}</strong></td>
-              <td>${j.tanggal || '-'} ${j.jam || ''}</td>
-              <td>${j.agenda || '-'}</td>
-              <td>${j.pemohon || '-'}</td>
-              <td>${j.termohon || '-'}</td>
-              <td><button class="btn-edit-jadwal" onclick="openEditJadwal('${j.id}')">✏️ Edit</button><button class="btn-del" onclick="deleteJadwal('${j.id}')">Hapus</button></td>
+              <td><strong style="cursor:pointer;color:var(--accent)" onclick="openDetailPerkara('${j.register}')">${j.register||'-'}</strong></td>
+              <td>${j.tanggal||'-'} ${j.jam||''}</td>
+              <td>${j.agenda||'-'}</td>
+              <td>${j.pemohon||'-'}</td>
+              <td>${j.termohon||'-'}</td>
+              <td>
+                <button class="btn-edit-jadwal" onclick="openEditJadwal('${j.id}')">✏️ Edit</button>
+                <button class="btn-del" onclick="deleteJadwal('${j.id}')">Hapus</button>
+              </td>
             </tr>
           `).join('')}
         </tbody>
       </table>
     `;
   } catch(e) {
-    document.getElementById('jadwalTable').innerHTML = `<div class="empty-state"><p>Gagal memuat.</p></div>`;
+    document.getElementById('jadwalTable').innerHTML = `<div class="empty-state"><p>Gagal memuat: ${e.message}</p></div>`;
   }
 }
+
+window.adminTambahJadwal = function() {
+  _editJadwalId = null;
+  document.getElementById('editJadwalModal').classList.add('open');
+  document.getElementById('editJadwalBody').innerHTML = formJadwalFields();
+  document.querySelector('#editJadwalModal .edit-jadwal-head h3').textContent = '➕ Tambah Jadwal Sidang';
+  document.getElementById('btnSaveEditJadwal').onclick = adminSimpanTambahJadwal;
+};
+
+window.adminSimpanTambahJadwal = async function() {
+  const btn = document.getElementById('btnSaveEditJadwal');
+  const required = ['f_register','f_tanggal','f_jam','f_agenda','f_pemohon','f_termohon'];
+  for (const f of required) {
+    if (!document.getElementById(f).value.trim()) { alert('Harap isi semua kolom yang wajib (*).'); return; }
+  }
+  btn.disabled = true; btn.textContent = 'Menyimpan...';
+  try {
+    await addDoc(collection(db, 'jadwal_sidang'), {
+      register     : document.getElementById('f_register').value.trim(),
+      tanggal      : document.getElementById('f_tanggal').value.trim(),
+      jam          : document.getElementById('f_jam').value.trim(),
+      agenda       : document.getElementById('f_agenda').value.trim(),
+      pemohon      : document.getElementById('f_pemohon').value.trim(),
+      termohon     : document.getElementById('f_termohon').value.trim(),
+      majelis      : document.getElementById('f_majelis').value.trim(),
+      mediator     : document.getElementById('f_mediator').value.trim(),
+      panitera     : document.getElementById('f_panitera').value.trim(),
+      status       : document.getElementById('f_status').value.trim(),
+      link_putusan : document.getElementById('f_link_putusan').value.trim(),
+      catatan      : document.getElementById('f_catatan').value.trim(),
+      createdAt    : new Date().toISOString(),
+      createdBy    : currentUser.uid
+    });
+    closeEditJadwal();
+    await refreshAdminJadwalTable();
+    showAdminAlert('success', '✓ Jadwal berhasil ditambahkan!');
+  } catch(e) {
+    alert('Gagal: ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = 'Simpan';
+  document.getElementById('btnSaveEditJadwal').onclick = saveEditJadwal;
+};
+
+// ── Detail Perkara (klik register) ──
+window.openDetailPerkara = async function(register) {
+  const modal = document.getElementById('detailPerkaraModal');
+  document.getElementById('detailPerkaraBody').innerHTML = `<div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><p>Memuat...</p></div>`;
+  modal.classList.add('open');
+
+  try {
+    const snap = await getDocs(collection(db, 'jadwal_sidang'));
+    const semua = [];
+    snap.forEach(d => semua.push({ id: d.id, ...d.data() }));
+    const sidangList = semua.filter(j => j.register === register)
+      .sort((a,b) => new Date(a.tanggal) - new Date(b.tanggal));
+
+    if (sidangList.length === 0) {
+      document.getElementById('detailPerkaraBody').innerHTML = `<div class="empty-state"><p>Data tidak ditemukan.</p></div>`;
+      return;
+    }
+
+    const latest = sidangList[sidangList.length - 1];
+
+    // Ambil catatan panitera & majelis
+    const [catatanPanSnap, catatanMajelisSnap] = await Promise.all([
+      getDoc(doc(db, 'catatan_panitera', register)),
+      getDocs(collection(db, 'catatan_majelis'))
+    ]);
+    const catatanPanitera = catatanPanSnap.exists() ? catatanPanSnap.data().isi : '';
+    const catatanMajelisList = [];
+    catatanMajelisSnap.forEach(d => {
+      if (d.id.startsWith(register + '_')) {
+        catatanMajelisList.push({ nama: d.data().namaMajelis || '–', isi: d.data().isi || '' });
+      }
+    });
+
+    const historyHtml = sidangList.map((s,i) => `
+      <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="min-width:100px;font-size:12px;color:var(--text-muted)">${s.tanggal||'-'}<br><strong>${s.jam||''}</strong></div>
+        <div>
+          <div style="font-size:13px;font-weight:600">${s.agenda||'-'}</div>
+          ${s.catatan ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px">${s.catatan}</div>` : ''}
+        </div>
+      </div>
+    `).join('');
+
+    const majelisHtml = catatanMajelisList.length > 0
+      ? catatanMajelisList.map(cm => `
+          <div style="margin-bottom:10px;padding:10px;background:var(--bg);border-radius:var(--radius-sm)">
+            <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:4px">${cm.nama}</div>
+            <div style="font-size:13px">${cm.isi}</div>
+          </div>
+        `).join('')
+      : '<em style="font-size:13px;color:var(--text-muted)">Belum ada catatan majelis</em>';
+
+    document.getElementById('detailPerkaraTitle').textContent = register;
+    document.getElementById('detailPerkaraBody').innerHTML = `
+      <div style="margin-bottom:16px">
+        <div style="font-size:15px;font-weight:700">${latest.pemohon||'-'} <span style="color:var(--text-muted);font-weight:400">vs</span> ${latest.termohon||'-'}</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-top:4px">
+          Majelis: ${latest.majelis||'-'} &nbsp;|&nbsp; Mediator: ${latest.mediator||'-'} &nbsp;|&nbsp; Panitera: ${latest.panitera||'-'}
+        </div>
+        <div style="margin-top:6px">
+          <span class="badge badge-${latest.status?'green':'blue'}" style="font-size:12px;padding:3px 10px;border-radius:99px;background:var(--accent-light);color:var(--accent);font-weight:600">${latest.status||'Aktif'}</span>
+        </div>
+      </div>
+
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">📅 Riwayat Sidang (${sidangList.length}x)</div>
+        <div style="background:var(--bg);border-radius:var(--radius-sm);padding:4px 12px;max-height:200px;overflow-y:auto">${historyHtml}</div>
+      </div>
+
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">📝 Catatan Panitera <span style="font-weight:400;color:var(--accent)">(bisa dilihat publik)</span></div>
+        <div style="background:var(--bg);border-radius:var(--radius-sm);padding:12px;font-size:13px">
+          ${catatanPanitera || '<em style="color:var(--text-muted)">Belum ada catatan</em>'}
+        </div>
+        <button class="btn-edit-catatan" style="margin-top:8px" onclick="adminEditCatatanDariDetail('panitera','${register}','${escapeJs(catatanPanitera)}')">
+          ${catatanPanitera ? '✏️ Edit Catatan Panitera' : '+ Tambah Catatan Panitera'}
+        </button>
+      </div>
+
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">⚖️ Catatan Majelis <span style="font-weight:400;color:var(--danger)">(hanya admin & majelis)</span></div>
+        ${majelisHtml}
+      </div>
+    `;
+  } catch(e) {
+    document.getElementById('detailPerkaraBody').innerHTML = `<div class="empty-state"><p>Gagal memuat: ${e.message}</p></div>`;
+  }
+};
+
+window.closeDetailPerkara = function() {
+  document.getElementById('detailPerkaraModal').classList.remove('open');
+};
+
+window.adminEditCatatanDariDetail = function(tipe, register, isiLama) {
+  closeDetailPerkara();
+  setTimeout(() => adminEditCatatan(tipe, tipe === 'panitera' ? register : `${register}_`, isiLama, register), 200);
+};
 
 window.deleteJadwal = async function(id) {
   if (!confirm('Hapus jadwal ini?')) return;
