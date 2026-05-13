@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal Internal – Komisi Informasi Provinsi Jambi</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f2ee;
+    --surface: #ffffff;
+    --border: #e0dbd2;
+    --accent: #1a3d2b;
+    --accent-mid: #2e6647;
+    --accent-light: #e6efe9;
+    --gold: #c09a3a;
+    --gold-light: #faf5e4;
+    --text-primary: #1a1a1a;
+    --text-secondary: #5a5a5a;
+    --text-muted: #9a9a9a;
+    --danger: #dc2626;
+    --danger-light: #fef2f2;
+    --success: #16a34a;
+    --success-light: #f0fdf4;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow-sm: 0 1px 4px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+    --shadow-lg: 0 12px 40px rgba(0,0,0,0.14);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text-primary); min-height: 100vh; }
+
+  /* ── LOADING SCREEN ── */
+  #loadingScreen {
+    position: fixed; inset: 0; background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px; z-index: 9999;
+    transition: opacity 0.4s;
+  }
+  #loadingScreen.hide { opacity: 0; pointer-events: none; }
+  .loading-logo { font-family: 'Lora', serif; font-size: 22px; font-weight: 700; color: #fff; letter-spacing: 0.04em; }
+  .loading-sub { font-size: 13px; color: rgba(255,255,255,0.6); }
+  .spinner { width: 36px; height: 36px; border: 3px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── LOGIN PAGE ── */
+  #loginPage {
+    display: none; min-height: 100vh;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-mid) 60%, #3a7a56 100%);
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  #loginPage.active { display: flex; }
+  .login-card {
+    background: var(--surface); border-radius: 20px;
+    box-shadow: var(--shadow-lg); width: 100%; max-width: 420px; overflow: hidden;
+  }
+  .login-header {
+    background: var(--accent); padding: 32px 32px 28px;
+    text-align: center;
+  }
+  .login-header img { width: 56px; margin-bottom: 12px; }
+  .login-header h1 { font-family: 'Lora', serif; font-size: 18px; font-weight: 700; color: #fff; line-height: 1.3; }
+  .login-header p { font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 4px; }
+  .login-body { padding: 32px; }
+  .login-body h2 { font-family: 'Lora', serif; font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  .login-body p { font-size: 13px; color: var(--text-secondary); margin-bottom: 24px; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+  .form-group input {
+    width: 100%; padding: 11px 14px; border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 14px; font-family: 'DM Sans', sans-serif;
+    outline: none; transition: border 0.2s;
+  }
+  .form-group input:focus { border-color: var(--accent); }
+  .btn-login {
+    width: 100%; padding: 13px; background: var(--accent); color: #fff;
+    border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 600;
+    cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.2s;
+    margin-top: 8px;
+  }
+  .btn-login:hover { background: var(--accent-mid); }
+  .btn-login:disabled { opacity: 0.6; cursor: not-allowed; }
+  .login-error {
+    background: var(--danger-light); border: 1px solid #fecaca; color: var(--danger);
+    padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px;
+    margin-top: 12px; display: none;
+  }
+  .login-error.show { display: block; }
+  .login-back { text-align: center; margin-top: 16px; }
+  .login-back a { font-size: 13px; color: var(--accent); text-decoration: none; font-weight: 500; }
+
+  /* ── APP SHELL ── */
+  #appShell { display: none; min-height: 100vh; flex-direction: column; }
+  #appShell.active { display: flex; }
+
+  /* Top Bar */
+  .app-topbar {
+    background: var(--accent); padding: 0 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 56px; position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  }
+  .app-topbar-left { display: flex; align-items: center; gap: 12px; }
+  .app-topbar-logo { font-family: 'Lora', serif; font-size: 15px; font-weight: 700; color: #fff; }
+  .app-topbar-logo span { color: var(--gold); font-size: 11px; display: block; font-family: 'DM Sans', sans-serif; font-weight: 400; }
+  .app-topbar-right { display: flex; align-items: center; gap: 12px; }
+  .user-badge {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.12); padding: 6px 12px; border-radius: 20px;
+  }
+  .user-badge-avatar {
+    width: 28px; height: 28px; border-radius: 50%; background: var(--gold);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: var(--accent);
+  }
+  .user-badge-info { line-height: 1.2; }
+  .user-badge-name { font-size: 13px; font-weight: 600; color: #fff; }
+  .user-badge-role { font-size: 10px; color: rgba(255,255,255,0.65); }
+  .btn-logout {
+    background: rgba(255,255,255,0.15); border: none; color: #fff;
+    padding: 7px 14px; border-radius: 20px; font-size: 13px; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; transition: background 0.2s;
+  }
+  .btn-logout:hover { background: rgba(255,255,255,0.25); }
+
+  /* Main Content */
+  .app-main { flex: 1; padding: 28px 24px; max-width: 1100px; margin: 0 auto; width: 100%; }
+  .page-title { font-family: 'Lora', serif; font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .page-sub { font-size: 13px; color: var(--text-secondary); margin-bottom: 24px; }
+
+  /* Role badge */
+  .role-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    margin-bottom: 20px;
+  }
+  .role-badge.majelis { background: #dbeafe; color: #1d4ed8; }
+  .role-badge.panitera { background: #fef3c7; color: #92400e; }
+  .role-badge.petugas { background: #f3e8ff; color: #6d28d9; }
+  .role-badge.admin { background: var(--accent-light); color: var(--accent); }
+
+  /* Cards grid */
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-bottom: 28px; }
+
+  /* Perkara card */
+  .perkara-card {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+    box-shadow: var(--shadow-sm); transition: box-shadow 0.2s, transform 0.2s;
+  }
+  .perkara-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  .perkara-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+  .perkara-register { font-family: 'Lora', serif; font-size: 14px; font-weight: 700; color: var(--accent); }
+  .perkara-agenda {
+    font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px;
+    background: var(--accent-light); color: var(--accent);
+  }
+  .perkara-para { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.4; }
+  .perkara-date { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
+  .perkara-catatan-preview {
+    margin-top: 12px; padding: 10px 12px;
+    background: var(--bg); border-radius: var(--radius-sm);
+    font-size: 12px; color: var(--text-secondary); line-height: 1.5;
+    border-left: 3px solid var(--border);
+  }
+  .perkara-catatan-preview.has-catatan { border-left-color: var(--accent); }
+  .btn-edit-catatan {
+    margin-top: 12px; width: 100%; padding: 9px; background: var(--accent-light);
+    color: var(--accent); border: none; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: background 0.2s;
+  }
+  .btn-edit-catatan:hover { background: #c8dece; }
+
+  /* Section header */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .section-title { font-family: 'Lora', serif; font-size: 17px; font-weight: 700; }
+  .section-count {
+    background: var(--accent); color: #fff; font-size: 12px; font-weight: 700;
+    padding: 3px 10px; border-radius: 20px;
+  }
+
+  /* Modal catatan */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal-card {
+    background: var(--surface); border-radius: 16px; width: 100%; max-width: 540px;
+    box-shadow: var(--shadow-lg); transform: translateY(20px); transition: transform 0.2s;
+  }
+  .modal-overlay.open .modal-card { transform: translateY(0); }
+  .modal-head {
+    padding: 20px 24px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; justify-content: space-between;
+  }
+  .modal-head h3 { font-family: 'Lora', serif; font-size: 16px; font-weight: 700; }
+  .modal-head p { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted); line-height: 1; }
+  .modal-body { padding: 20px 24px; }
+  .modal-body textarea {
+    width: 100%; min-height: 140px; padding: 12px 14px;
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 14px; font-family: 'DM Sans', sans-serif; resize: vertical; outline: none;
+    transition: border 0.2s; line-height: 1.6;
+  }
+  .modal-body textarea:focus { border-color: var(--accent); }
+  .modal-foot {
+    padding: 16px 24px; border-top: 1px solid var(--border);
+    display: flex; gap: 10px; justify-content: flex-end;
+  }
+  .btn-cancel {
+    padding: 9px 20px; background: var(--bg); border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 14px; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; color: var(--text-secondary);
+  }
+  .btn-save {
+    padding: 9px 24px; background: var(--accent); color: #fff; border: none;
+    border-radius: var(--radius-sm); font-size: 14px; font-weight: 600;
+    cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.2s;
+  }
+  .btn-save:hover { background: var(--accent-mid); }
+  .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+  .save-status { font-size: 12px; color: var(--success); margin-right: auto; display: flex; align-items: center; gap: 4px; }
+
+  /* Form tambah jadwal (petugas) */
+  .form-card { background: var(--surface); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow-sm); border: 1.5px solid var(--border); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-row.single { grid-template-columns: 1fr; }
+  .form-group-dash { margin-bottom: 16px; }
+  .form-group-dash label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+  .form-group-dash input, .form-group-dash select, .form-group-dash textarea {
+    width: 100%; padding: 10px 13px; border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 14px; font-family: 'DM Sans', sans-serif;
+    outline: none; transition: border 0.2s; background: var(--surface);
+  }
+  .form-group-dash input:focus, .form-group-dash select:focus, .form-group-dash textarea:focus { border-color: var(--accent); }
+  .btn-submit {
+    padding: 12px 32px; background: var(--accent); color: #fff; border: none;
+    border-radius: var(--radius-sm); font-size: 15px; font-weight: 600;
+    cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.2s;
+  }
+  .btn-submit:hover { background: var(--accent-mid); }
+  .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Admin tabs */
+  .admin-tabs { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+  .admin-tab {
+    padding: 8px 20px; border-radius: 20px; font-size: 13px; font-weight: 600;
+    cursor: pointer; border: 1.5px solid var(--border); background: var(--surface);
+    color: var(--text-secondary); transition: all 0.2s;
+  }
+  .admin-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* User management table */
+  .table-wrap { background: var(--surface); border-radius: var(--radius); border: 1.5px solid var(--border); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: var(--bg); padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+  td { padding: 13px 16px; font-size: 14px; border-top: 1px solid var(--border); }
+  tr:hover td { background: var(--bg); }
+  .td-role { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .td-role.majelis { background: #dbeafe; color: #1d4ed8; }
+  .td-role.panitera { background: #fef3c7; color: #92400e; }
+  .td-role.petugas { background: #f3e8ff; color: #6d28d9; }
+  .td-role.admin { background: var(--accent-light); color: var(--accent); }
+  .btn-del { background: var(--danger-light); color: var(--danger); border: none; padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 600; }
+  .btn-del:hover { background: #fecaca; }
+  .btn-edit { background: var(--accent-light); color: var(--accent); border: none; padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 600; margin-right: 6px; }
+  .btn-edit:hover { background: #c8dece; }
+
+  /* Tab petugas */
+  .petugas-tabs { display: flex; gap: 8px; margin-bottom: 24px; }
+  .petugas-tab {
+    padding: 8px 20px; border-radius: 20px; font-size: 13px; font-weight: 600;
+    cursor: pointer; border: 1.5px solid var(--border); background: var(--surface);
+    color: var(--text-secondary); transition: all 0.2s;
+  }
+  .petugas-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* Modal edit jadwal */
+  .modal-jadwal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .modal-jadwal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal-jadwal-card {
+    background: var(--surface); border-radius: 16px; width: 100%; max-width: 640px;
+    box-shadow: var(--shadow-lg); transform: translateY(20px); transition: transform 0.2s;
+    max-height: 90vh; overflow-y: auto;
+  }
+  .modal-jadwal-overlay.open .modal-jadwal-card { transform: translateY(0); }
+  .modal-jadwal-head {
+    padding: 20px 24px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; justify-content: space-between;
+    position: sticky; top: 0; background: var(--surface); z-index: 1;
+  }
+  .modal-jadwal-body { padding: 20px 24px; }
+  .modal-jadwal-foot {
+    padding: 16px 24px; border-top: 1px solid var(--border);
+    display: flex; gap: 10px; justify-content: flex-end;
+    position: sticky; bottom: 0; background: var(--surface);
+  }
+
+  /* Alert */
+  .alert { padding: 12px 16px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px; display: none; }
+  .alert.show { display: block; }
+  .alert.success { background: var(--success-light); color: var(--success); border: 1px solid #bbf7d0; }
+  .alert.error { background: var(--danger-light); color: var(--danger); border: 1px solid #fecaca; }
+
+  /* Empty state */
+  .empty-state { text-align: center; padding: 48px 24px; color: var(--text-muted); }
+  .empty-state-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .app-main { padding: 20px 16px; }
+    .form-row { grid-template-columns: 1fr; }
+    .user-badge-info { display: none; }
+    .cards-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="loading-logo">Komisi Informasi</div>
+  <div class="loading-sub">Provinsi Jambi</div>
+</div>
+
+<!-- LOGIN -->
+<div id="loginPage">
+  <div class="login-card">
+    <div class="login-header">
+      <h1>KOMISI INFORMASI<br>PROVINSI JAMBI</h1>
+      <p>Portal Internal Persidangan</p>
+    </div>
+    <div class="login-body">
+      <h2>Masuk</h2>
+      <p>Khusus untuk Majelis, Panitera, Petugas, dan Admin</p>
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="loginEmail" placeholder="contoh: zamharir" autocomplete="username" autocorrect="off" autocapitalize="off">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div style="position:relative">
+          <input type="password" id="loginPassword" placeholder="••••••••" style="width:100%;padding-right:44px">
+          <button type="button" onclick="togglePassword()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;line-height:1;padding:0" id="eyeBtn">👁️</button>
+        </div>
+      </div>
+      <button class="btn-login" id="btnLogin" onclick="doLogin()">Masuk</button>
+      <div class="login-error" id="loginError"></div>
+      <div class="login-back"><a href="index.html">← Kembali ke Jadwal Sidang</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- APP SHELL -->
+<div id="appShell">
+  <div class="app-topbar">
+    <div class="app-topbar-left">
+      <div class="app-topbar-logo">
+        KI Jambi
+        <span>Portal Internal</span>
+      </div>
+    </div>
+    <div class="app-topbar-right">
+      <div class="user-badge">
+        <div class="user-badge-avatar" id="topAvatar">–</div>
+        <div class="user-badge-info">
+          <div class="user-badge-name" id="topName">–</div>
+          <div class="user-badge-role" id="topRole">–</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">Keluar</button>
+    </div>
+  </div>
+
+  <div class="app-main" id="appMain">
+    <!-- Diisi JS sesuai role -->
+  </div>
+</div>
+
+<!-- MODAL CATATAN -->
+<div class="modal-overlay" id="catatanModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <h3 id="modalTitle">Edit Catatan</h3>
+        <p id="modalSub">–</p>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <textarea id="modalTextarea" placeholder="Tulis catatan sidang di sini..."></textarea>
+    </div>
+    <div class="modal-foot">
+      <span class="save-status" id="saveStatus" style="display:none">✓ Tersimpan</span>
+      <button class="btn-cancel" onclick="closeModal()">Batal</button>
+      <button class="btn-save" id="btnSave" onclick="saveCatatan()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDIT JADWAL -->
+<div class="modal-jadwal-overlay" id="editJadwalModal">
+  <div class="modal-jadwal-card">
+    <div class="modal-jadwal-head">
+      <div>
+        <h3 style="font-family:'Lora',serif;font-size:16px;font-weight:700">Edit Jadwal Sidang</h3>
+        <p style="font-size:12px;color:var(--text-muted);margin-top:2px" id="editJadwalSub">–</p>
+      </div>
+      <button class="modal-close" onclick="closeEditJadwal()">✕</button>
+    </div>
+    <div class="modal-jadwal-body">
+      <input type="hidden" id="ej_id">
+      <div class="form-row">
+        <div class="form-group-dash">
+          <label>Nomor Register *</label>
+          <input type="text" id="ej_register" placeholder="001/KI-JBI/PSI/2026">
+        </div>
+        <div class="form-group-dash">
+          <label>Tanggal Sidang *</label>
+          <input type="date" id="ej_tanggal">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group-dash">
+          <label>Jam *</label>
+          <input type="time" id="ej_jam">
+        </div>
+        <div class="form-group-dash">
+          <label>Agenda *</label>
+          <select id="ej_agenda">
+            <option value="">Pilih agenda...</option>
+            <option>Pemeriksaan Awal</option>
+            <option>Mediasi</option>
+            <option>Sidang Lanjutan</option>
+            <option>Putusan</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group-dash">
+          <label>Pemohon *</label>
+          <input type="text" id="ej_pemohon" placeholder="Nama pemohon">
+        </div>
+        <div class="form-group-dash">
+          <label>Termohon *</label>
+          <input type="text" id="ej_termohon" placeholder="Nama termohon">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group-dash">
+          <label>Majelis (pisah koma)</label>
+          <input type="text" id="ej_majelis" placeholder="Siti Masnidar, Ahmad Taufiq, Zamharir">
+        </div>
+        <div class="form-group-dash">
+          <label>Panitera</label>
+          <input type="text" id="ej_panitera" placeholder="Nama panitera">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group-dash">
+          <label>Mediator</label>
+          <input type="text" id="ej_mediator" placeholder="Nama mediator (jika ada)">
+        </div>
+        <div class="form-group-dash">
+          <label>Status Perkara</label>
+          <select id="ej_status">
+            <option value="">Pilih status...</option>
+            <option value="ON PROSES">ON PROSES</option>
+            <option value="SELESAI">SELESAI</option>
+            <option value="DITARIK">DITARIK</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row single">
+        <div class="form-group-dash">
+          <label>Link Putusan</label>
+          <input type="text" id="ej_link_putusan" placeholder="https://... (opsional)">
+        </div>
+      </div>
+      <div class="form-row single">
+        <div class="form-group-dash">
+          <label>Catatan</label>
+          <textarea id="ej_catatan" rows="3" placeholder="Catatan tambahan (opsional)"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-jadwal-foot">
+      <span class="save-status" id="editJadwalStatus" style="display:none">✓ Tersimpan</span>
+      <button class="btn-cancel" onclick="closeEditJadwal()">Batal</button>
+      <button class="btn-save" id="btnSaveJadwal" onclick="saveEditJadwal()">Simpan Perubahan</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ── Firebase Config ──
+const firebaseConfig = {
+  apiKey: "AIzaSyAupEIJ7vyFPKDF8NzNSnOtWm32XUjucdE",
+  authDomain: "informasi-sidang-ki-jambi.firebaseapp.com",
+  projectId: "informasi-sidang-ki-jambi",
+  storageBucket: "informasi-sidang-ki-jambi.firebasestorage.app",
+  messagingSenderId: "216831525707",
+  appId: "1:216831525707:web:6ff8e84fa4ed6246b91ece"
+};
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+// ── State ──
+let currentUser = null;
+let currentUserData = null;
+let editingDocId = null;
+
+// ── Auth State ──
+onAuthStateChanged(auth, async (user) => {
+  const loading = document.getElementById('loadingScreen');
+  if (user) {
+    const snap = await getDoc(doc(db, 'users', user.uid));
+    if (snap.exists()) {
+      currentUser = user;
+      currentUserData = snap.data();
+      showApp();
+    } else {
+      await signOut(auth);
+      showLogin();
+    }
+  } else {
+    showLogin();
+  }
+  loading.classList.add('hide');
+  setTimeout(() => loading.style.display = 'none', 500);
+});
+
+function showLogin() {
+  document.getElementById('loginPage').classList.add('active');
+  document.getElementById('appShell').classList.remove('active');
+}
+
+function showApp() {
+  document.getElementById('loginPage').classList.remove('active');
+  document.getElementById('appShell').classList.add('active');
+  setupTopbar();
+  renderDashboard();
+}
+
+// ── Topbar ──
+function setupTopbar() {
+  const nama = currentUserData.nama || currentUserData.email;
+  const role = currentUserData.role;
+  document.getElementById('topName').textContent = nama;
+  document.getElementById('topRole').textContent = roleLabel(role);
+  document.getElementById('topAvatar').textContent = nama.charAt(0).toUpperCase();
+}
+
+function roleLabel(r) {
+  return { admin: 'Administrator', majelis: 'Majelis', panitera: 'Panitera', petugas: 'Petugas' }[r] || r;
+}
+function roleClass(r) {
+  return { admin: 'admin', majelis: 'majelis', panitera: 'panitera', petugas: 'petugas' }[r] || '';
+}
+
+// ── Login ──
+window.doLogin = async function() {
+  const username = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const pass     = document.getElementById('loginPassword').value;
+  const btn      = document.getElementById('btnLogin');
+  const errEl    = document.getElementById('loginError');
+  errEl.classList.remove('show');
+  if (!username) { errEl.textContent = 'Masukkan username.'; errEl.classList.add('show'); return; }
+  // Auto-tambah domain di belakang
+  const email = username.includes('@') ? username : `${username}@kijambi.internal`;
+  btn.disabled = true;
+  btn.textContent = 'Memuat...';
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch(e) {
+    errEl.textContent = 'Username atau password salah. Coba lagi.';
+    errEl.classList.add('show');
+    btn.disabled = false;
+    btn.textContent = 'Masuk';
+  }
+};
+
+window.doLogout = async function() {
+  await signOut(auth);
+};
+
+// Enter key on login
+document.getElementById('loginPassword').addEventListener('keydown', e => {
+  if (e.key === 'Enter') window.doLogin();
+});
+
+window.togglePassword = function() {
+  const input = document.getElementById('loginPassword');
+  const btn = document.getElementById('eyeBtn');
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁️';
+  }
+};
+
+// ── Dashboard Router ──
+async function renderDashboard() {
+  const role = currentUserData.role;
+  const main = document.getElementById('appMain');
+  if (role === 'majelis')  await renderMajelis(main);
+  else if (role === 'panitera') await renderPanitera(main);
+  else if (role === 'petugas') renderPetugas(main);
+  else if (role === 'admin')   await renderAdmin(main);
+}
+
+// ════════════════════════════════════
+// DASHBOARD MAJELIS
+// ════════════════════════════════════
+async function renderMajelis(main) {
+  const nama = currentUserData.nama;
+  main.innerHTML = `
+    <div class="page-title">Dashboard Majelis</div>
+    <div class="page-sub">Selamat datang, ${nama}</div>
+    <span class="role-badge majelis">⚖️ Majelis</span>
+    <div class="section-header">
+      <div class="section-title">Perkara yang Ditugaskan</div>
+      <div class="section-count" id="perkaraCount">–</div>
+    </div>
+    <div class="alert" id="dashAlert"></div>
+    <div class="cards-grid" id="perkaraGrid">
+      <div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><p>Memuat data...</p></div>
+    </div>
+  `;
+  await loadPerkaraMajelis(nama);
+}
+
+async function loadPerkaraMajelis(namaMajelis) {
+  const grid = document.getElementById('perkaraGrid');
+  const countEl = document.getElementById('perkaraCount');
+  try {
+    // Ambil jadwal dari Firestore collection 'jadwal_sidang'
+    const snap = await getDocs(collection(db, 'jadwal_sidang'));
+    const semua = [];
+    snap.forEach(d => semua.push({ id: d.id, ...d.data() }));
+
+    // Filter perkara yang majelisnya termasuk user ini
+    const filtered = semua.filter(j => {
+      const majelis = (j.majelis || '').toLowerCase();
+      return majelis.includes(namaMajelis.toLowerCase());
+    });
+
+    // Deduplikasi per register
+    const byRegister = {};
+    filtered.forEach(j => {
+      if (!byRegister[j.register]) byRegister[j.register] = [];
+      byRegister[j.register].push(j);
+    });
+
+    const registers = Object.keys(byRegister);
+    countEl.textContent = registers.length;
+
+    if (registers.length === 0) {
+      grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📋</div><p>Belum ada perkara yang ditugaskan kepada Anda.</p></div>`;
+      return;
+    }
+
+    // Untuk tiap register, ambil catatan majelis
+    const cards = await Promise.all(registers.map(async reg => {
+      const sidangList = byRegister[reg];
+      const latest = sidangList.sort((a,b) => new Date(b.tanggal) - new Date(a.tanggal))[0];
+
+      // Cek catatan majelis
+      const catatanSnap = await getDoc(doc(db, 'catatan_majelis', `${reg}_${currentUser.uid}`));
+      const catatan = catatanSnap.exists() ? catatanSnap.data().isi : '';
+
+      return `
+        <div class="perkara-card">
+          <div class="perkara-card-header">
+            <div class="perkara-register">${reg}</div>
+            <div class="perkara-agenda">${latest.agenda || 'Sidang'}</div>
+          </div>
+          <div class="perkara-para">${latest.pemohon || '-'} <span style="color:var(--text-muted)">vs</span> ${latest.termohon || '-'}</div>
+          <div class="perkara-date">📅 ${latest.tanggal || '-'} &nbsp;🕐 ${latest.jam || '-'}</div>
+          <div class="perkara-catatan-preview ${catatan ? 'has-catatan' : ''}">
+            ${catatan ? catatan.substring(0,120) + (catatan.length > 120 ? '...' : '') : '<em style="color:var(--text-muted)">Belum ada catatan</em>'}
+          </div>
+          <button class="btn-edit-catatan" onclick="openCatatanModal('${reg}', '${latest.pemohon||''} vs ${latest.termohon||''}', '${escapeJs(catatan)}', 'majelis')">
+            ${catatan ? '✏️ Edit Catatan' : '+ Tambah Catatan'}
+          </button>
+        </div>
+      `;
+    }));
+    grid.innerHTML = cards.join('');
+  } catch(e) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>Gagal memuat data: ${e.message}</p></div>`;
+  }
+}
+
+// ════════════════════════════════════
+// DASHBOARD PANITERA
+// ════════════════════════════════════
+async function renderPanitera(main) {
+  const nama = currentUserData.nama;
+  main.innerHTML = `
+    <div class="page-title">Dashboard Panitera</div>
+    <div class="page-sub">Selamat datang, ${nama}</div>
+    <span class="role-badge panitera">📝 Panitera</span>
+    <div class="section-header">
+      <div class="section-title">Perkara yang Ditugaskan</div>
+      <div class="section-count" id="perkaraCount">–</div>
+    </div>
+    <div class="alert" id="dashAlert"></div>
+    <div class="cards-grid" id="perkaraGrid">
+      <div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><p>Memuat data...</p></div>
+    </div>
+  `;
+  await loadPerkaraPanitera(nama);
+}
+
+async function loadPerkaraPanitera(namaPanitera) {
+  const grid = document.getElementById('perkaraGrid');
+  const countEl = document.getElementById('perkaraCount');
+  try {
+    const snap = await getDocs(collection(db, 'jadwal_sidang'));
+    const semua = [];
+    snap.forEach(d => semua.push({ id: d.id, ...d.data() }));
+
+    const filtered = semua.filter(j => {
+      const panitera = (j.panitera || '').toLowerCase();
+      return panitera.includes(namaPanitera.toLowerCase());
+    });
+
+    const byRegister = {};
+    filtered.forEach(j => {
+      if (!byRegister[j.register]) byRegister[j.register] = [];
+      byRegister[j.register].push(j);
+    });
+
+    const registers = Object.keys(byRegister);
+    countEl.textContent = registers.length;
+
+    if (registers.length === 0) {
+      grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📋</div><p>Belum ada perkara yang ditugaskan.</p></div>`;
+      return;
+    }
+
+    const cards = await Promise.all(registers.map(async reg => {
+      const sidangList = byRegister[reg];
+      const latest = sidangList.sort((a,b) => new Date(b.tanggal) - new Date(a.tanggal))[0];
+
+      // Catatan panitera
+      const catatanSnap = await getDoc(doc(db, 'catatan_panitera', reg));
+      const catatan = catatanSnap.exists() ? catatanSnap.data().isi : '';
+
+      // Catatan majelis (panitera bisa LIHAT tapi tidak edit)
+      const majelisSnap = await getDocs(collection(db, 'catatan_majelis'));
+      const catatanMajelis = [];
+      majelisSnap.forEach(d => {
+        if (d.id.startsWith(reg + '_')) {
+          catatanMajelis.push({ uid: d.id, isi: d.data().isi, nama: d.data().namaMajelis || '–' });
+        }
+      });
+
+      const majelisHtml = catatanMajelis.length > 0
+        ? catatanMajelis.map(cm => `<div style="margin-bottom:6px"><strong style="font-size:11px;color:var(--accent)">${cm.nama}</strong><br><span style="font-size:12px">${cm.isi || '-'}</span></div>`).join('')
+        : '<em style="color:var(--text-muted);font-size:12px">Belum ada catatan majelis</em>';
+
+      return `
+        <div class="perkara-card">
+          <div class="perkara-card-header">
+            <div class="perkara-register">${reg}</div>
+            <div class="perkara-agenda">${latest.agenda || 'Sidang'}</div>
+          </div>
+          <div class="perkara-para">${latest.pemohon || '-'} <span style="color:var(--text-muted)">vs</span> ${latest.termohon || '-'}</div>
+          <div class="perkara-date">📅 ${latest.tanggal || '-'} &nbsp;🕐 ${latest.jam || '-'}</div>
+
+          <div style="margin-top:12px">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Catatan Majelis</div>
+            <div class="perkara-catatan-preview">${majelisHtml}</div>
+          </div>
+
+          <div style="margin-top:12px">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Catatan Panitera (Saya)</div>
+            <div class="perkara-catatan-preview ${catatan ? 'has-catatan' : ''}">
+              ${catatan ? catatan.substring(0,100) + (catatan.length > 100 ? '...' : '') : '<em style="color:var(--text-muted)">Belum ada catatan</em>'}
+            </div>
+          </div>
+
+          <button class="btn-edit-catatan" onclick="openCatatanModal('${reg}', '${latest.pemohon||''} vs ${latest.termohon||''}', '${escapeJs(catatan)}', 'panitera')">
+            ${catatan ? '✏️ Edit Catatan Saya' : '+ Tambah Catatan'}
+          </button>
+        </div>
+      `;
+    }));
+    grid.innerHTML = cards.join('');
+  } catch(e) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>Gagal memuat data.</p></div>`;
+  }
+}
+
+// ════════════════════════════════════
+// DASHBOARD PETUGAS
+// ════════════════════════════════════
+function renderPetugas(main) {
+  main.innerHTML = `
+    <div class="page-title">Dashboard Petugas</div>
+    <div class="page-sub">Kelola jadwal sidang</div>
+    <span class="role-badge petugas">🗂️ Petugas</span>
+    <div class="petugas-tabs">
+      <div class="petugas-tab active" onclick="petugasTab('tambah', this)">➕ Tambah Jadwal</div>
+      <div class="petugas-tab" onclick="petugasTab('daftar', this)">📋 Daftar Jadwal</div>
+    </div>
+    <div id="petugasContent"></div>
+  `;
+  renderTambahJadwalForm();
+}
+
+window.petugasTab = function(tab, el) {
+  document.querySelectorAll('.petugas-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  if (tab === 'tambah') {
+    renderTambahJadwalForm();
+  } else {
+    loadPetugasJadwal();
+  }
+};
+
+function renderTambahJadwalForm() {
+  document.getElementById('petugasContent').innerHTML = `
+    <div class="alert" id="dashAlert"></div>
+    <div class="form-card">
+      <div class="form-row">
+        <div class="form-group-dash">
+          <label>Nomor Register *</label>
+          <input type="text" id="f_register" placeholder="001/KI-JBI/PSI/2026">
+        </div>
+        <div class="form-group-dash">
+          <label>Tanggal Sidang *</label>
+          <input type="date" id="f_tanggal">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group-dash">
+          <label>Jam *</label>
+          <input type="time" id="f_jam">
+        </div>
+        <div class="form-group-dash">
+          <label>Agenda *</label>
+          <select id="f_agenda">
+            <option value="">Pilih agenda...</option>
+            <option>Pemeriksaan Awal</option>
+            <option>Mediasi</option>
+            <option>Sidang Lanjutan</option>
+            <option>Putusan</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group-dash">
+          <label>Pemohon *</label>
+          <input type="text" id="f_pemohon" placeholder="Nama pemohon">
+        </div>
+        <div class="form-group-dash">
+          <label>Termohon *</label>
+          <input type="text" id="f_termohon" placeholder="Nama termohon">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group-dash">
+          <label>Majelis (pisah koma)</label>
+          <input type="text" id="f_majelis" placeholder="Siti Masnidar, Ahmad Taufiq, Zamharir">
+        </div>
+        <div class="form-group-dash">
+          <label>Panitera</label>
+          <input type="text" id="f_panitera" placeholder="Nama panitera">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group-dash">
+          <label>Mediator</label>
+          <input type="text" id="f_mediator" placeholder="Nama mediator (jika ada)">
+        </div>
+        <div class="form-group-dash">
+          <label>Status Perkara</label>
+          <select id="f_status">
+            <option value="">Pilih status...</option>
+            <option value="ON PROSES">ON PROSES</option>
+            <option value="SELESAI">SELESAI</option>
+            <option value="DITARIK">DITARIK</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row single">
+        <div class="form-group-dash">
+          <label>Link Putusan</label>
+          <input type="text" id="f_link_putusan" placeholder="https://... (opsional)">
+        </div>
+      </div>
+      <div class="form-row single">
+        <div class="form-group-dash">
+          <label>Catatan</label>
+          <textarea id="f_catatan" rows="3" placeholder="Catatan tambahan (opsional)"></textarea>
+        </div>
+      </div>
+      <button class="btn-submit" id="btnSubmitJadwal" onclick="submitJadwal()">+ Tambah Jadwal</button>
+    </div>
+  `;
+}
+
+async function loadPetugasJadwal() {
+  document.getElementById('petugasContent').innerHTML = `
+    <div class="alert" id="dashAlert"></div>
+    <div class="table-wrap" id="petugasJadwalTable">
+      <div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><p>Memuat...</p></div>
+    </div>
+  `;
+  try {
+    const snap = await getDocs(collection(db, 'jadwal_sidang'));
+    const jadwal = [];
+    snap.forEach(d => jadwal.push({ id: d.id, ...d.data() }));
+    jadwal.sort((a,b) => new Date(b.tanggal) - new Date(a.tanggal));
+    if (jadwal.length === 0) {
+      document.getElementById('petugasJadwalTable').innerHTML = `<div class="empty-state"><p>Belum ada jadwal.</p></div>`;
+      return;
+    }
+    document.getElementById('petugasJadwalTable').innerHTML = `
+      <table>
+        <thead><tr><th>Register</th><th>Tanggal</th><th>Agenda</th><th>Pemohon</th><th>Termohon</th><th>Majelis</th><th>Status</th><th>Aksi</th></tr></thead>
+        <tbody>
+          ${jadwal.map(j => `
+            <tr>
+              <td><strong>${j.register}</strong></td>
+              <td>${j.tanggal || '-'} ${j.jam || ''}</td>
+              <td>${j.agenda || '-'}</td>
+              <td>${j.pemohon || '-'}</td>
+              <td>${j.termohon || '-'}</td>
+              <td style="font-size:12px;color:var(--text-secondary);max-width:160px">${j.majelis ? j.majelis.substring(0,50) + (j.majelis.length > 50 ? '...' : '') : '<em style="color:var(--text-muted)">–</em>'}</td>
+              <td><span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:10px;background:${j.status==='SELESAI'?'#f0fdf4':j.status==='DITARIK'?'#fef2f2':'#fef3c7'};color:${j.status==='SELESAI'?'#16a34a':j.status==='DITARIK'?'#dc2626':'#92400e'}">${j.status||'ON PROSES'}</span></td>
+              <td><button class="btn-edit" onclick="editJadwal('${j.id}')">✏️ Edit</button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch(e) {
+    document.getElementById('petugasJadwalTable').innerHTML = `<div class="empty-state"><p>Gagal memuat.</p></div>`;
+  }
+}
+
+window.submitJadwal = async function() {
+  const btn = document.getElementById('btnSubmitJadwal');
+  const alert = document.getElementById('dashAlert');
+  const fields = ['f_register','f_tanggal','f_jam','f_agenda','f_pemohon','f_termohon'];
+  const vals = {};
+  for (const f of fields) {
+    vals[f] = document.getElementById(f).value.trim();
+    if (!vals[f]) {
+      showAlert('error', 'Harap isi semua kolom yang wajib (*).');
+      return;
+    }
+  }
+  btn.disabled = true; btn.textContent = 'Menyimpan...';
+  try {
+    await addDoc(collection(db, 'jadwal_sidang'), {
+      register: vals.f_register,
+      tanggal: vals.f_tanggal,
+      jam: vals.f_jam,
+      agenda: vals.f_agenda,
+      pemohon: vals.f_pemohon,
+      termohon: vals.f_termohon,
+      majelis: document.getElementById('f_majelis').value.trim(),
+      panitera: document.getElementById('f_panitera').value.trim(),
+      mediator: document.getElementById('f_mediator').value.trim(),
+      status: document.getElementById('f_status').value.trim(),
+      link_putusan: document.getElementById('f_link_putusan').value.trim(),
+      catatan: document.getElementById('f_catatan').value.trim(),
+      createdAt: new Date().toISOString(),
+      createdBy: currentUser.uid
+    });
+    showAlert('success', '✓ Jadwal berhasil ditambahkan!');
+    ['f_register','f_tanggal','f_jam','f_agenda','f_pemohon','f_termohon','f_majelis','f_panitera','f_mediator','f_link_putusan','f_catatan'].forEach(f => document.getElementById(f).value = '');
+    document.getElementById('f_status').value = '';
+  } catch(e) {
+    showAlert('error', 'Gagal menyimpan: ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = '+ Tambah Jadwal';
+};
+
+// ════════════════════════════════════
+// DASHBOARD ADMIN
+// ════════════════════════════════════
+async function renderAdmin(main) {
+  main.innerHTML = `
+    <div class="page-title">Dashboard Admin</div>
+    <div class="page-sub">Kelola seluruh data sistem</div>
+    <span class="role-badge admin">🔑 Administrator</span>
+    <div class="admin-tabs">
+      <div class="admin-tab active" onclick="adminTab('users', this)">👥 Kelola User</div>
+      <div class="admin-tab" onclick="adminTab('jadwal', this)">📅 Jadwal Sidang</div>
+      <div class="admin-tab" onclick="adminTab('catatan', this)">📝 Semua Catatan</div>
+    </div>
+    <div id="adminContent"></div>
+  `;
+  await loadAdminUsers();
+}
+
+window.adminTab = async function(tab, el) {
+  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  if (tab === 'users') await loadAdminUsers();
+  else if (tab === 'jadwal') await loadAdminJadwal();
+  else if (tab === 'catatan') await loadAdminCatatan();
+};
+
+async function loadAdminUsers() {
+  const cont = document.getElementById('adminContent');
+  cont.innerHTML = `
+    <div class="alert" id="adminAlert"></div>
+    <div class="form-card" style="margin-bottom:20px">
+      <div style="font-family:'Lora',serif;font-size:16px;font-weight:700;margin-bottom:16px">Tambah User Baru</div>
+      <div class="form-row">
+        <div class="form-group-dash">
+          <label>Nama Lengkap *</label>
+          <input type="text" id="u_nama" placeholder="Zamharir">
+        </div>
+        <div class="form-group-dash">
+          <label>Email *</label>
+          <input type="email" id="u_email" placeholder="zamharir@kijambi.go.id">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group-dash">
+          <label>Password *</label>
+          <input type="text" id="u_pass" placeholder="Min. 6 karakter">
+        </div>
+        <div class="form-group-dash">
+          <label>Role *</label>
+          <select id="u_role">
+            <option value="">Pilih role...</option>
+            <option value="majelis">Majelis</option>
+            <option value="panitera">Panitera</option>
+            <option value="petugas">Petugas</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-submit" onclick="createUser()">+ Buat Akun</button>
+    </div>
+    <div class="table-wrap" id="userTable"><div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><p>Memuat...</p></div></div>
+  `;
+  await loadUserTable();
+}
+
+async function loadUserTable() {
+  const table = document.getElementById('userTable');
+  try {
+    const snap = await getDocs(collection(db, 'users'));
+    const users = [];
+    snap.forEach(d => users.push({ uid: d.id, ...d.data() }));
+    if (users.length === 0) {
+      table.innerHTML = `<div class="empty-state"><p>Belum ada user.</p></div>`;
+      return;
+    }
+    table.innerHTML = `
+      <table>
+        <thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>Aksi</th></tr></thead>
+        <tbody>
+          ${users.map(u => `
+            <tr>
+              <td>${u.nama || '-'}</td>
+              <td>${u.email || '-'}</td>
+              <td><span class="td-role ${u.role}">${roleLabel(u.role)}</span></td>
+              <td>${u.uid !== currentUser.uid ? `<button class="btn-del" onclick="deleteUser('${u.uid}', '${escapeJs(u.nama||'')}')">Hapus</button>` : '<em style="font-size:12px;color:var(--text-muted)">Akun Anda</em>'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch(e) {
+    table.innerHTML = `<div class="empty-state"><p>Gagal memuat user.</p></div>`;
+  }
+}
+
+window.createUser = async function() {
+  const nama  = document.getElementById('u_nama').value.trim();
+  const email = document.getElementById('u_email').value.trim();
+  const pass  = document.getElementById('u_pass').value.trim();
+  const role  = document.getElementById('u_role').value;
+  if (!nama || !email || !pass || !role) { showAdminAlert('error', 'Semua kolom wajib diisi.'); return; }
+  if (pass.length < 6) { showAdminAlert('error', 'Password minimal 6 karakter.'); return; }
+
+  // Buat user via Anthropic API proxy (kita pakai Cloud Function workaround)
+  // Karena client-side Firebase Auth tidak bisa buat user lain,
+  // kita simpan dulu ke collection 'pending_users' lalu admin approve
+  try {
+    await addDoc(collection(db, 'pending_users'), {
+      nama, email, password: pass, role,
+      createdAt: new Date().toISOString(),
+      createdBy: currentUser.uid,
+      status: 'pending'
+    });
+    showAdminAlert('success', `✓ Permintaan akun untuk ${nama} (${email}) telah disimpan. Gunakan Firebase Console → Authentication → Add User untuk menyelesaikan pembuatan akun, lalu salin UID-nya ke collection "users".`);
+    ['u_nama','u_email','u_pass'].forEach(f => document.getElementById(f).value = '');
+    document.getElementById('u_role').value = '';
+  } catch(e) {
+    showAdminAlert('error', 'Gagal: ' + e.message);
+  }
+};
+
+window.deleteUser = async function(uid, nama) {
+  if (!confirm(`Hapus akun ${nama}? Catatan yang dibuat tetap tersimpan.`)) return;
+  try {
+    await deleteDoc(doc(db, 'users', uid));
+    showAdminAlert('success', `✓ Akun ${nama} berhasil dihapus dari sistem.`);
+    await loadUserTable();
+  } catch(e) {
+    showAdminAlert('error', 'Gagal menghapus: ' + e.message);
+  }
+};
+
+let _allJadwal = []; // cache semua data untuk filter
+
+async function loadAdminJadwal() {
+  const cont = document.getElementById('adminContent');
+  cont.innerHTML = `
+    <div class="alert" id="adminAlert"></div>
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+      <div class="form-group-dash" style="margin:0;flex:1;min-width:160px">
+        <input type="date" id="filterTanggal" placeholder="Filter tanggal..." style="padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;width:100%">
+      </div>
+      <button onclick="applyFilterTanggal()" style="padding:8px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Filter</button>
+      <button onclick="resetFilterTanggal()" style="padding:8px 14px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text-secondary)">Reset</button>
+      <button onclick="hapusSemuaTanggalFilter()" style="padding:8px 14px;background:var(--danger-light);color:var(--danger);border:1px solid #fecaca;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">🗑️ Hapus Semua Tanggal Ini</button>
+    </div>
+    <div class="table-wrap" id="jadwalTable"><div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><p>Memuat...</p></div></div>`;
+  try {
+    const snap = await getDocs(collection(db, 'jadwal_sidang'));
+    _allJadwal = [];
+    snap.forEach(d => _allJadwal.push({ id: d.id, ...d.data() }));
+    _allJadwal.sort((a,b) => new Date(b.tanggal) - new Date(a.tanggal));
+    renderJadwalTable(_allJadwal);
+  } catch(e) {
+    document.getElementById('jadwalTable').innerHTML = `<div class="empty-state"><p>Gagal memuat.</p></div>`;
+  }
+}
+
+function renderJadwalTable(jadwal) {
+  if (jadwal.length === 0) {
+    document.getElementById('jadwalTable').innerHTML = `<div class="empty-state"><p>Tidak ada data untuk filter ini.</p></div>`;
+    return;
+  }
+  document.getElementById('jadwalTable').innerHTML = `
+    <table>
+      <thead><tr><th>Register</th><th>Tanggal</th><th>Agenda</th><th>Pemohon</th><th>Termohon</th><th>Majelis</th><th>Status</th><th>Aksi</th></tr></thead>
+      <tbody>
+        ${jadwal.map(j => `
+          <tr>
+            <td><strong>${j.register || '-'}</strong></td>
+            <td>${j.tanggal || '-'} ${j.jam || ''}</td>
+            <td>${j.agenda || '-'}</td>
+            <td>${j.pemohon || '-'}</td>
+            <td>${j.termohon || '-'}</td>
+            <td style="font-size:12px;color:var(--text-secondary);max-width:180px">${j.majelis ? j.majelis.substring(0,60) + (j.majelis.length > 60 ? '...' : '') : '<em style="color:var(--text-muted)">–</em>'}</td>
+            <td><span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:10px;background:${j.status==='SELESAI'?'#f0fdf4':j.status==='DITARIK'?'#fef2f2':'#fef3c7'};color:${j.status==='SELESAI'?'#16a34a':j.status==='DITARIK'?'#dc2626':'#92400e'}">${j.status||'ON PROSES'}</span></td>
+            <td><button class="btn-edit" onclick="editJadwal('${j.id}')">✏️ Edit</button><button class="btn-del" onclick="deleteJadwal('${j.id}')">Hapus</button></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+window.applyFilterTanggal = function() {
+  const val = document.getElementById('filterTanggal').value;
+  if (!val) { showAdminAlert('error', 'Pilih tanggal dulu untuk difilter.'); return; }
+  const filtered = _allJadwal.filter(j => j.tanggal === val);
+  renderJadwalTable(filtered);
+  if (filtered.length === 0) {
+    showAdminAlert('success', `Tidak ada data untuk tanggal ${val}.`);
+  } else {
+    showAdminAlert('success', `Menampilkan ${filtered.length} data untuk tanggal ${val}. Kamu bisa hapus satu-satu atau pakai tombol "Hapus Semua Tanggal Ini".`);
+  }
+};
+
+window.resetFilterTanggal = function() {
+  document.getElementById('filterTanggal').value = '';
+  renderJadwalTable(_allJadwal);
+};
+
+window.hapusSemuaTanggalFilter = async function() {
+  const val = document.getElementById('filterTanggal').value;
+  if (!val) { showAdminAlert('error', 'Pilih tanggal dulu sebelum hapus massal.'); return; }
+  const toDelete = _allJadwal.filter(j => j.tanggal === val);
+  if (toDelete.length === 0) { showAdminAlert('error', 'Tidak ada data untuk tanggal tersebut.'); return; }
+  if (!confirm(`Hapus SEMUA ${toDelete.length} jadwal pada tanggal ${val}? Tindakan ini tidak bisa dibatalkan.`)) return;
+  try {
+    await Promise.all(toDelete.map(j => deleteDoc(doc(db, 'jadwal_sidang', j.id))));
+    showAdminAlert('success', `✓ ${toDelete.length} jadwal pada tanggal ${val} berhasil dihapus.`);
+    await loadAdminJadwal();
+  } catch(e) {
+    showAdminAlert('error', 'Gagal hapus: ' + e.message);
+  }
+};
+
+window.deleteJadwal = async function(id) {
+  if (!confirm('Hapus jadwal ini?')) return;
+  await deleteDoc(doc(db, 'jadwal_sidang', id));
+  showAdminAlert('success', '✓ Jadwal dihapus.');
+  await loadAdminJadwal();
+};
+
+window.editJadwal = async function(id) {
+  try {
+    const snap = await getDoc(doc(db, 'jadwal_sidang', id));
+    if (!snap.exists()) { alert('Data tidak ditemukan.'); return; }
+    const d = snap.data();
+    document.getElementById('ej_id').value = id;
+    document.getElementById('ej_register').value = d.register || '';
+    document.getElementById('ej_tanggal').value = d.tanggal || '';
+    document.getElementById('ej_jam').value = d.jam || '';
+    document.getElementById('ej_agenda').value = d.agenda || '';
+    document.getElementById('ej_pemohon').value = d.pemohon || '';
+    document.getElementById('ej_termohon').value = d.termohon || '';
+    document.getElementById('ej_majelis').value = d.majelis || '';
+    document.getElementById('ej_panitera').value = d.panitera || '';
+    document.getElementById('ej_mediator').value = d.mediator || '';
+    document.getElementById('ej_status').value = d.status || '';
+    document.getElementById('ej_link_putusan').value = d.link_putusan || '';
+    document.getElementById('ej_catatan').value = d.catatan || '';
+    document.getElementById('editJadwalSub').textContent = d.register || id;
+    document.getElementById('editJadwalStatus').style.display = 'none';
+    document.getElementById('editJadwalModal').classList.add('open');
+  } catch(e) {
+    alert('Gagal memuat data: ' + e.message);
+  }
+};
+
+window.closeEditJadwal = function() {
+  document.getElementById('editJadwalModal').classList.remove('open');
+};
+
+window.saveEditJadwal = async function() {
+  const btn = document.getElementById('btnSaveJadwal');
+  const id = document.getElementById('ej_id').value;
+  const requiredFields = ['ej_register','ej_tanggal','ej_jam','ej_agenda','ej_pemohon','ej_termohon'];
+  for (const f of requiredFields) {
+    if (!document.getElementById(f).value.trim()) {
+      alert('Harap isi semua kolom yang wajib (*).');
+      return;
+    }
+  }
+  btn.disabled = true; btn.textContent = 'Menyimpan...';
+  try {
+    await setDoc(doc(db, 'jadwal_sidang', id), {
+      register: document.getElementById('ej_register').value.trim(),
+      tanggal:  document.getElementById('ej_tanggal').value.trim(),
+      jam:      document.getElementById('ej_jam').value.trim(),
+      agenda:   document.getElementById('ej_agenda').value.trim(),
+      pemohon:  document.getElementById('ej_pemohon').value.trim(),
+      termohon: document.getElementById('ej_termohon').value.trim(),
+      majelis:  document.getElementById('ej_majelis').value.trim(),
+      panitera: document.getElementById('ej_panitera').value.trim(),
+      mediator: document.getElementById('ej_mediator').value.trim(),
+      status:   document.getElementById('ej_status').value.trim(),
+      link_putusan: document.getElementById('ej_link_putusan').value.trim(),
+      catatan:  document.getElementById('ej_catatan').value.trim(),
+      updatedAt: new Date().toISOString(),
+      updatedBy: currentUser.uid
+    }, { merge: true });
+    document.getElementById('editJadwalStatus').style.display = 'flex';
+    btn.textContent = 'Simpan Perubahan';
+    btn.disabled = false;
+    setTimeout(() => {
+      document.getElementById('editJadwalStatus').style.display = 'none';
+      window.closeEditJadwal();
+      // Refresh tabel yang sedang aktif
+      const role = currentUserData.role;
+      if (role === 'admin') loadAdminJadwal();
+      else loadPetugasJadwal();
+    }, 1500);
+  } catch(e) {
+    btn.textContent = 'Simpan Perubahan';
+    btn.disabled = false;
+    alert('Gagal menyimpan: ' + e.message);
+  }
+};
+
+async function loadAdminCatatan() {
+  const cont = document.getElementById('adminContent');
+  cont.innerHTML = `<div class="alert" id="adminAlert"></div><div id="catatanList"><div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><p>Memuat...</p></div></div>`;
+  try {
+    const [majelisSnap, paniteraSnap] = await Promise.all([
+      getDocs(collection(db, 'catatan_majelis')),
+      getDocs(collection(db, 'catatan_panitera'))
+    ]);
+    let html = '';
+    if (majelisSnap.empty && paniteraSnap.empty) {
+      document.getElementById('catatanList').innerHTML = `<div class="empty-state"><p>Belum ada catatan.</p></div>`;
+      return;
+    }
+    html += `<div style="font-family:'Lora',serif;font-size:15px;font-weight:700;margin-bottom:12px">Catatan Majelis</div><div class="cards-grid">`;
+    majelisSnap.forEach(d => {
+      const data = d.data();
+      html += `<div class="perkara-card">
+        <div class="perkara-register">${data.register || d.id.split('_')[0]}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin:4px 0">${data.namaMajelis || '–'}</div>
+        <div class="perkara-catatan-preview has-catatan">${data.isi || '-'}</div>
+        <button class="btn-edit-catatan" style="margin-top:10px" onclick="adminEditCatatan('majelis','${d.id}','${escapeJs(data.isi||'')}','${escapeJs(data.register||'')}')">✏️ Edit</button>
+      </div>`;
+    });
+    html += `</div><div style="font-family:'Lora',serif;font-size:15px;font-weight:700;margin:24px 0 12px">Catatan Panitera</div><div class="cards-grid">`;
+    paniteraSnap.forEach(d => {
+      const data = d.data();
+      html += `<div class="perkara-card">
+        <div class="perkara-register">${d.id}</div>
+        <div class="perkara-catatan-preview has-catatan">${data.isi || '-'}</div>
+        <button class="btn-edit-catatan" style="margin-top:10px" onclick="adminEditCatatan('panitera','${d.id}','${escapeJs(data.isi||'')}','${d.id}')">✏️ Edit</button>
+      </div>`;
+    });
+    html += '</div>';
+    document.getElementById('catatanList').innerHTML = html;
+  } catch(e) {
+    document.getElementById('catatanList').innerHTML = `<div class="empty-state"><p>Gagal memuat catatan.</p></div>`;
+  }
+}
+
+window.adminEditCatatan = function(tipe, docId, isi, register) {
+  editingDocId = { tipe, docId, register };
+  document.getElementById('modalTitle').textContent = `Edit Catatan ${tipe === 'majelis' ? 'Majelis' : 'Panitera'}`;
+  document.getElementById('modalSub').textContent = register;
+  document.getElementById('modalTextarea').value = isi;
+  document.getElementById('saveStatus').style.display = 'none';
+  document.getElementById('catatanModal').classList.add('open');
+};
+
+// ════════════════════════════════════
+// MODAL CATATAN
+// ════════════════════════════════════
+window.openCatatanModal = function(register, para, catatan, tipe) {
+  editingDocId = { register, tipe };
+  document.getElementById('modalTitle').textContent = tipe === 'majelis' ? 'Catatan Majelis' : 'Catatan Panitera';
+  document.getElementById('modalSub').textContent = register + ' — ' + para;
+  document.getElementById('modalTextarea').value = catatan;
+  document.getElementById('saveStatus').style.display = 'none';
+  document.getElementById('catatanModal').classList.add('open');
+};
+
+window.closeModal = function() {
+  document.getElementById('catatanModal').classList.remove('open');
+  editingDocId = null;
+  // Refresh dashboard
+  renderDashboard();
+};
+
+window.saveCatatan = async function() {
+  const btn = document.getElementById('btnSave');
+  const isi = document.getElementById('modalTextarea').value.trim();
+  btn.disabled = true; btn.textContent = 'Menyimpan...';
+  try {
+    if (editingDocId.tipe === 'majelis') {
+      // Admin edit existing
+      if (editingDocId.docId) {
+        await setDoc(doc(db, 'catatan_majelis', editingDocId.docId), { isi, updatedAt: new Date().toISOString() }, { merge: true });
+      } else {
+        // Majelis save own
+        const docId = `${editingDocId.register}_${currentUser.uid}`;
+        await setDoc(doc(db, 'catatan_majelis', docId), {
+          isi, register: editingDocId.register,
+          namaMajelis: currentUserData.nama,
+          uid: currentUser.uid,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      }
+    } else {
+      // Panitera / admin edit panitera
+      const docId = editingDocId.docId || editingDocId.register;
+      await setDoc(doc(db, 'catatan_panitera', docId), {
+        isi, register: editingDocId.register || docId,
+        namaPanitera: currentUserData.nama,
+        uid: currentUser.uid,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    }
+    document.getElementById('saveStatus').style.display = 'flex';
+    btn.textContent = 'Simpan';
+    btn.disabled = false;
+    setTimeout(() => document.getElementById('saveStatus').style.display = 'none', 3000);
+  } catch(e) {
+    btn.textContent = 'Simpan';
+    btn.disabled = false;
+    alert('Gagal menyimpan: ' + e.message);
+  }
+};
+
+// ── Helpers ──
+function showAlert(type, msg) {
+  const el = document.getElementById('dashAlert');
+  if (!el) return;
+  el.className = `alert ${type} show`;
+  el.textContent = msg;
+  setTimeout(() => el.classList.remove('show'), 5000);
+}
+
+function showAdminAlert(type, msg) {
+  const el = document.getElementById('adminAlert');
+  if (!el) return;
+  el.className = `alert ${type} show`;
+  el.textContent = msg;
+  setTimeout(() => el.classList.remove('show'), 8000);
+}
+
+function escapeJs(str) {
+  return (str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
+}
+
+// Firestore Rules info
+window.onload = function() {
+  console.log('%cKI Jambi Portal Internal', 'font-size:16px;font-weight:bold;color:#1a3d2b');
+};
+</script>
+</body>
+</html>
