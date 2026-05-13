@@ -1141,7 +1141,7 @@ async function refreshAdminJadwalTable() {
         <tbody>
           ${jadwal.map(j => `
             <tr>
-              <td><strong style="cursor:pointer;color:var(--accent)" onclick="openDetailPerkara('${j.register}')">${j.register||'-'}</strong></td>
+              <td><strong class="register-link" data-register="${j.register||''}" style="cursor:pointer;color:var(--accent)">${j.register||'-'}</strong></td>
               <td>${j.tanggal||'-'} ${j.jam||''}</td>
               <td>${j.agenda||'-'}</td>
               <td>${j.pemohon||'-'}</td>
@@ -1290,6 +1290,15 @@ window.openDetailPerkara = async function(register) {
     document.getElementById('detailPerkaraBody').innerHTML = `<div class="empty-state"><p>Gagal memuat: ${e.message}</p></div>`;
   }
 };
+
+// Event delegation untuk klik register di tabel
+document.addEventListener('click', function(e) {
+  const el = e.target.closest('.register-link');
+  if (el) {
+    const register = el.getAttribute('data-register');
+    if (register) openDetailPerkara(register);
+  }
+});
 
 window.closeDetailPerkara = function() {
   document.getElementById('detailPerkaraModal').classList.remove('open');
