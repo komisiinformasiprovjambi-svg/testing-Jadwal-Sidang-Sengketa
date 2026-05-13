@@ -994,27 +994,40 @@ async function renderAdmin(main) {
     <div class="page-sub">Kelola seluruh data sistem</div>
     <span class="role-badge admin">🔑 Administrator</span>
     <div class="admin-tabs">
-      <div class="admin-tab active" onclick="window.adminTab('users', this)">👥 Kelola User</div>
-      <div class="admin-tab" onclick="window.adminTab('jadwal', this)">📅 Jadwal Sidang</div>
-      <div class="admin-tab" onclick="window.adminTab('catatan', this)">📝 Semua Catatan</div>
+      <div class="admin-tab active" data-tab="users">👥 Kelola User</div>
+      <div class="admin-tab" data-tab="jadwal">📅 Jadwal Sidang</div>
+      <div class="admin-tab" data-tab="catatan">📝 Semua Catatan</div>
     </div>
     <div id="adminContent"></div>
   `;
   await loadAdminUsers();
 }
 
-window.adminTab = async function(tab, el) {
+// ── Admin tab event delegation (lebih reliable dari onclick) ──
+document.addEventListener('click', function(e) {
+  const tab = e.target.closest('.admin-tab[data-tab]');
+  if (!tab) return;
+  const tabName = tab.getAttribute('data-tab');
   document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
+  tab.classList.add('active');
   const cont = document.getElementById('adminContent');
+  if (!cont) return;
   cont.innerHTML = `<div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><p>Memuat...</p></div>`;
-  try {
-    if (tab === 'users') await loadAdminUsers();
-    else if (tab === 'jadwal') await loadAdminJadwal();
-    else if (tab === 'catatan') await loadAdminCatatan();
-  } catch(e) {
-    cont.innerHTML = `<div class="empty-state"><p>⚠️ Gagal: ${e.message}</p></div>`;
-  }
+  (async () => {
+    try {
+      if (tabName === 'users')   await loadAdminUsers();
+      else if (tabName === 'jadwal')  await loadAdminJadwal();
+      else if (tabName === 'catatan') await loadAdminCatatan();
+    } catch(e) {
+      if (cont) cont.innerHTML = `<div class="empty-state"><p>⚠️ Gagal memuat: ${e.message}</p></div>`;
+    }
+  })();
+});
+
+// Tetap expose window.adminTab untuk backward compat
+window.adminTab = async function(tab, el) {
+  const tabEl = document.querySelector(`.admin-tab[data-tab="${tab}"]`);
+  if (tabEl) tabEl.click();
 };
 
 async function loadAdminUsers() {
