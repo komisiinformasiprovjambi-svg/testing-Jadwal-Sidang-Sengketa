@@ -1657,8 +1657,9 @@
 
 <!-- STICKY NAV BAR -->
 <div class="nav-bar">
-  <div class="nav-bar-inner">
+  <div class="nav-bar-inner" style="justify-content:space-between">
     <span class="nav-label"><strong>Sistem Informasi Jadwal Persidangan</strong> &nbsp;·&nbsp; Komisi Informasi Provinsi Jambi</span>
+    <a href="dashboard.html" style="font-size:12px;font-weight:600;color:var(--gold);text-decoration:none;padding:5px 14px;border:1px solid rgba(192,154,58,0.4);border-radius:20px;transition:all 0.2s;white-space:nowrap" onmouseover="this.style.background='rgba(192,154,58,0.15)'" onmouseout="this.style.background='transparent'">🔐 Portal Internal</a>
   </div>
 </div>
 
@@ -1887,6 +1888,13 @@
         </div>
       </div>
 
+      <div class="modal-section" id="m-catatan-panitera-section" style="display:none">
+        <div class="modal-section-title">📝 Catatan Panitera</div>
+        <div class="catatan-box" style="border-left:3px solid var(--accent);padding-left:14px">
+          <p id="m-catatan-panitera" style="font-style:normal;color:var(--text-primary)">–</p>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -1896,35 +1904,25 @@
   <strong>Komisi Informasi Provinsi Jambi</strong> &nbsp;·&nbsp; Sistem Informasi Jadwal Persidangan &nbsp;·&nbsp; © 2026
 </footer>
 
-<script>
+<script type="module">
 /* ════════════════════════════════════════════════════════
-   KONFIGURASI GOOGLE SHEETS
-   Salin URL dari: File → Publikasikan di web → CSV → Publikasikan
-   URL berbentuk: https://docs.google.com/spreadsheets/d/e/2PACX-.../pub?output=csv
+   FIREBASE CONFIG — baca data jadwal dari Firestore
    ════════════════════════════════════════════════════════ */
-const PUBLISHED_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTFQ4rzXTvSaoHQKWQV-qNiDrJtivSzelW5C1t1l5QsTQeXAZcUrlFWvV2FTOgyH4Qo3IDNc7Uz-h04/pub?output=csv';
+import { initializeApp }   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, getDocs, query, orderBy }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-/* ── Mapping kolom spreadsheet (0-based index)
-   Kolom A=0 (No), B=1 (Tanggal), C=2 (Register), D=3 (Jam),
-   E=4 (Pemohon), F=5 (Termohon), G=6 (Majelis),
-   H=7 (Mediator), I=8 (Panitera Pengganti), J=9 (Agenda),
-   K=10 (Catatan), L=11 (Status), M=12 (Link Putusan)
-   ── */
-const COL = {
-  no           : 0,
-  tanggal      : 1,
-  register     : 2,
-  jam          : 3,
-  pemohon      : 4,
-  termohon     : 5,
-  majelis      : 6,
-  mediator     : 7,
-  panitera     : 8,
-  agenda       : 9,
-  catatan      : 10,
-  status       : 11,  /* Kolom L — STATUS PERKARA */
-  link_putusan : 12   /* Kolom M — LINK PDF PUTUSAN (Google Drive) */
+const firebaseConfig = {
+  apiKey            : "AIzaSyBvlaW1M23w3dEGUJgJBBuMEP7YQ_hqDtY",
+  authDomain        : "testing-jadwal-sidang.firebaseapp.com",
+  projectId         : "testing-jadwal-sidang",
+  storageBucket     : "testing-jadwal-sidang.firebasestorage.app",
+  messagingSenderId : "192307955600",
+  appId             : "1:192307955600:web:67016ad181325841e69515"
 };
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
 
 /* ════════════════════════════════════════════════════════
    STATE
@@ -1934,77 +1932,30 @@ let activeFilter = 'all';
 let showPast     = false;   /* false = hanya tampil hari ini ke depan */
 
 /* ════════════════════════════════════════════════════════
-   LAYER 1 — FETCH: ambil data dari Google Sheets via CSV publik
-   Tidak perlu API key. Sheet harus di-publish ke web (lihat panduan).
+   LAYER 1 — FETCH: ambil data dari Firestore collection jadwal_sidang
    ════════════════════════════════════════════════════════ */
-async function fetchSheetData() {
-  const url = PUBLISHED_CSV_URL;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status} – gagal mengambil data dari Google Sheets`);
-  const csv = await res.text();
-  return parseCSV(csv);
-}
-
-/* ── Parser CSV sederhana (handle quoted fields dengan koma/newline) ── */
-function parseCSV(csv) {
-  const rows   = [];
-  let   row    = [];
-  let   cell   = '';
-  let   inQ    = false;
-
-  for (let i = 0; i < csv.length; i++) {
-    const ch   = csv[i];
-    const next = csv[i + 1];
-    if (inQ) {
-      if (ch === '"' && next === '"') { cell += '"'; i++; }
-      else if (ch === '"')            { inQ = false; }
-      else                            { cell += ch; }
-    } else {
-      if      (ch === '"')  { inQ = true; }
-      else if (ch === ',')  { row.push(cell.trim()); cell = ''; }
-      else if (ch === '\n') { row.push(cell.trim()); rows.push(row); row = []; cell = ''; }
-      else if (ch === '\r') { /* skip */ }
-      else                  { cell += ch; }
-    }
-  }
-  if (cell || row.length) { row.push(cell.trim()); rows.push(row); }
-  return rows;
-}
-
-/* ════════════════════════════════════════════════════════
-   LAYER 2 — TRANSFORM: ubah raw rows CSV → array objek jadwal
-   Baris ke-0 adalah header (TANGGAL SIDANG, NOMOR REGISTER, dst.)
-   Data sidang mulai baris ke-1.
-   ════════════════════════════════════════════════════════ */
-function transformRows(rows) {
-  if (!rows || rows.length < 2) return [];
-
-  /* Cari baris header (mengandung "TANGGAL" atau "REGISTER") */
-  let headerIdx = 0;
-  for (let i = 0; i < Math.min(rows.length, 10); i++) {
-    const joined = rows[i].join('|').toUpperCase();
-    if (joined.includes('TANGGAL') || joined.includes('REGISTER')) {
-      headerIdx = i;
-      break;
-    }
-  }
-
-  return rows.slice(headerIdx + 1)
-    .map(r => ({
-      tanggal      : (r[COL.tanggal]      || '').trim(),
-      register     : (r[COL.register]     || '').trim(),
-      jam          : (r[COL.jam]          || '').trim(),
-      pemohon      : (r[COL.pemohon]      || '').trim(),
-      termohon     : (r[COL.termohon]     || '').trim(),
-      majelis      : (r[COL.majelis]      || '').trim(),
-      mediator     : (r[COL.mediator]     || '').trim(),
-      panitera     : (r[COL.panitera]     || '').trim(),
-      agenda       : (r[COL.agenda]       || '').trim(),
-      catatan      : (r[COL.catatan]      || '').trim(),
-      status       : (r[COL.status]       || '').trim(),
-      link_putusan : (r[COL.link_putusan] || '').trim(),
-    }))
-    .filter(d => d.register); /* buang baris kosong */
+async function fetchFirestoreData() {
+  const snap = await getDocs(
+    query(collection(db, 'jadwal_sidang'), orderBy('tanggal', 'asc'))
+  );
+  return snap.docs.map(d => {
+    const data = d.data();
+    return {
+      id           : d.id,
+      tanggal      : (data.tanggal      || '').trim(),
+      register     : (data.register     || '').trim(),
+      jam          : (data.jam          || '').trim(),
+      pemohon      : (data.pemohon      || '').trim(),
+      termohon     : (data.termohon     || '').trim(),
+      majelis      : (data.majelis      || '').trim(),
+      mediator     : (data.mediator     || '').trim(),
+      panitera     : (data.panitera     || '').trim(),
+      agenda       : (data.agenda       || '').trim(),
+      catatan      : (data.catatan      || '').trim(),
+      status       : (data.status       || '').trim(),
+      link_putusan : (data.link_putusan || '').trim(),
+    };
+  }).filter(d => d.register); /* buang dokumen tanpa register */
 }
 
 /* ════════════════════════════════════════════════════════
@@ -2386,10 +2337,35 @@ document.addEventListener('keydown', e => {
 
 /* ── Handle tombol Back di HP: tutup modal dulu, jangan keluar situs ── */
 function openModal(d) {
-  /* Override openModal untuk tambah history entry */
   _fillModal(d);
   document.getElementById('modalOverlay').classList.add('open');
   history.pushState({ modal: true }, '');
+
+  /* Ambil catatan panitera dari Firebase */
+  const section = document.getElementById('m-catatan-panitera-section');
+  const elCatPanitera = document.getElementById('m-catatan-panitera');
+  section.style.display = 'none';
+  elCatPanitera.textContent = '–';
+
+  if (d.register) {
+    import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js").then(({ initializeApp, getApps }) => {
+      import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js").then(({ getFirestore, doc, getDoc }) => {
+        const apps = getApps();
+        const fbApp = apps.length ? apps[0] : initializeApp({
+          apiKey: "AIzaSyAupEIJ7vyFPKDF8NzNSnOtWm32XUjucdE",
+          authDomain: "informasi-sidang-ki-jambi.firebaseapp.com",
+          projectId: "informasi-sidang-ki-jambi"
+        });
+        const db = getFirestore(fbApp);
+        getDoc(doc(db, 'catatan_panitera', d.register)).then(snap => {
+          if (snap.exists() && snap.data().isi) {
+            elCatPanitera.textContent = snap.data().isi;
+            section.style.display = 'block';
+          }
+        }).catch(() => {});
+      });
+    });
+  }
 }
 
 window.addEventListener('popstate', e => {
@@ -2716,13 +2692,12 @@ document.addEventListener('click', e => {
 async function initApp() {
   showLoading();
   try {
-    const raw  = await fetchSheetData();
-    sidangData = transformRows(raw);
+    sidangData = await fetchFirestoreData();
     filterCards();
     updateStats();
   } catch (err) {
     console.error('[Jadwal Sidang] Error:', err);
-    showError(err.message || 'Terjadi kesalahan jaringan.');
+    showError(err.message || 'Terjadi kesalahan saat mengambil data dari Firestore.');
   }
 }
 
@@ -2730,6 +2705,21 @@ async function initApp() {
 const styleEl = document.createElement('style');
 styleEl.textContent = `@keyframes spin { to { transform: rotate(360deg); } }`;
 document.head.appendChild(styleEl);
+
+/* ── Expose fungsi ke window (diperlukan karena pakai type="module") ── */
+window.filterCards      = filterCards;
+window.setFilter        = setFilter;
+window.togglePast       = togglePast;
+window.openModal        = openModal;
+window.closeModal       = closeModal;
+window.closeModalDirect = closeModalDirect;
+window.openStatsModal   = openStatsModal;
+window.closeStatsModal  = closeStatsModal;
+window.closeStatsModalDirect = closeStatsModalDirect;
+window.bukaRiwayatDariStats  = bukaRiwayatDariStats;
+window.switchPage       = switchPage;
+window.onRiwayatInput   = onRiwayatInput;
+window.selectRegister   = selectRegister;
 
 /* Jalankan saat halaman siap */
 initApp();

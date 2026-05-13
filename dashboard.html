@@ -268,42 +268,18 @@
   .td-role.admin { background: var(--accent-light); color: var(--accent); }
   .btn-del { background: var(--danger-light); color: var(--danger); border: none; padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 600; }
   .btn-del:hover { background: #fecaca; }
-  .btn-edit { background: var(--accent-light); color: var(--accent); border: none; padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 600; margin-right: 6px; }
-  .btn-edit:hover { background: #c8dece; }
-
-  /* Tab petugas */
-  .petugas-tabs { display: flex; gap: 8px; margin-bottom: 24px; }
-  .petugas-tab {
-    padding: 8px 20px; border-radius: 20px; font-size: 13px; font-weight: 600;
-    cursor: pointer; border: 1.5px solid var(--border); background: var(--surface);
-    color: var(--text-secondary); transition: all 0.2s;
-  }
-  .petugas-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-
-  /* Modal edit jadwal */
-  .modal-jadwal-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-    display: flex; align-items: center; justify-content: center;
-    padding: 24px; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s;
-  }
-  .modal-jadwal-overlay.open { opacity: 1; pointer-events: all; }
-  .modal-jadwal-card {
-    background: var(--surface); border-radius: 16px; width: 100%; max-width: 640px;
-    box-shadow: var(--shadow-lg); transform: translateY(20px); transition: transform 0.2s;
-    max-height: 90vh; overflow-y: auto;
-  }
-  .modal-jadwal-overlay.open .modal-jadwal-card { transform: translateY(0); }
-  .modal-jadwal-head {
-    padding: 20px 24px 16px; border-bottom: 1px solid var(--border);
-    display: flex; align-items: flex-start; justify-content: space-between;
-    position: sticky; top: 0; background: var(--surface); z-index: 1;
-  }
-  .modal-jadwal-body { padding: 20px 24px; }
-  .modal-jadwal-foot {
-    padding: 16px 24px; border-top: 1px solid var(--border);
-    display: flex; gap: 10px; justify-content: flex-end;
-    position: sticky; bottom: 0; background: var(--surface);
-  }
+  .btn-edit-jadwal { background: var(--accent-light); color: var(--accent); border: none; padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 600; margin-right: 6px; }
+  .btn-edit-jadwal:hover { background: #c8dece; }
+  #editJadwalModal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center; padding:16px; }
+  #editJadwalModal.open { display:flex; }
+  .edit-jadwal-card { background:var(--surface); border-radius:var(--radius); width:100%; max-width:620px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-lg); }
+  .edit-jadwal-head { padding:20px 24px 16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+  .edit-jadwal-head h3 { font-family:'Lora',serif; font-size:16px; font-weight:700; }
+  .edit-jadwal-body { padding:20px 24px; }
+  .edit-jadwal-foot { padding:16px 24px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; }
+  .petugas-tabs { display:flex; gap:8px; margin-bottom:24px; }
+  .petugas-tab { padding:8px 20px; border-radius:20px; font-size:13px; font-weight:600; cursor:pointer; border:1.5px solid var(--border); background:var(--surface); color:var(--text-secondary); transition:all 0.2s; }
+  .petugas-tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
 
   /* Alert */
   .alert { padding: 12px 16px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px; display: none; }
@@ -410,95 +386,16 @@
 </div>
 
 <!-- MODAL EDIT JADWAL -->
-<div class="modal-jadwal-overlay" id="editJadwalModal">
-  <div class="modal-jadwal-card">
-    <div class="modal-jadwal-head">
-      <div>
-        <h3 style="font-family:'Lora',serif;font-size:16px;font-weight:700">Edit Jadwal Sidang</h3>
-        <p style="font-size:12px;color:var(--text-muted);margin-top:2px" id="editJadwalSub">–</p>
-      </div>
+<div id="editJadwalModal">
+  <div class="edit-jadwal-card">
+    <div class="edit-jadwal-head">
+      <h3>✏️ Edit Jadwal Sidang</h3>
       <button class="modal-close" onclick="closeEditJadwal()">✕</button>
     </div>
-    <div class="modal-jadwal-body">
-      <input type="hidden" id="ej_id">
-      <div class="form-row">
-        <div class="form-group-dash">
-          <label>Nomor Register *</label>
-          <input type="text" id="ej_register" placeholder="001/KI-JBI/PSI/2026">
-        </div>
-        <div class="form-group-dash">
-          <label>Tanggal Sidang *</label>
-          <input type="date" id="ej_tanggal">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group-dash">
-          <label>Jam *</label>
-          <input type="time" id="ej_jam">
-        </div>
-        <div class="form-group-dash">
-          <label>Agenda *</label>
-          <select id="ej_agenda">
-            <option value="">Pilih agenda...</option>
-            <option>Pemeriksaan Awal</option>
-            <option>Mediasi</option>
-            <option>Sidang Lanjutan</option>
-            <option>Putusan</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group-dash">
-          <label>Pemohon *</label>
-          <input type="text" id="ej_pemohon" placeholder="Nama pemohon">
-        </div>
-        <div class="form-group-dash">
-          <label>Termohon *</label>
-          <input type="text" id="ej_termohon" placeholder="Nama termohon">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group-dash">
-          <label>Majelis (pisah koma)</label>
-          <input type="text" id="ej_majelis" placeholder="Siti Masnidar, Ahmad Taufiq, Zamharir">
-        </div>
-        <div class="form-group-dash">
-          <label>Panitera</label>
-          <input type="text" id="ej_panitera" placeholder="Nama panitera">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group-dash">
-          <label>Mediator</label>
-          <input type="text" id="ej_mediator" placeholder="Nama mediator (jika ada)">
-        </div>
-        <div class="form-group-dash">
-          <label>Status Perkara</label>
-          <select id="ej_status">
-            <option value="">Pilih status...</option>
-            <option value="ON PROSES">ON PROSES</option>
-            <option value="SELESAI">SELESAI</option>
-            <option value="DITARIK">DITARIK</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-row single">
-        <div class="form-group-dash">
-          <label>Link Putusan</label>
-          <input type="text" id="ej_link_putusan" placeholder="https://... (opsional)">
-        </div>
-      </div>
-      <div class="form-row single">
-        <div class="form-group-dash">
-          <label>Catatan</label>
-          <textarea id="ej_catatan" rows="3" placeholder="Catatan tambahan (opsional)"></textarea>
-        </div>
-      </div>
-    </div>
-    <div class="modal-jadwal-foot">
-      <span class="save-status" id="editJadwalStatus" style="display:none">✓ Tersimpan</span>
+    <div class="edit-jadwal-body" id="editJadwalBody"></div>
+    <div class="edit-jadwal-foot">
       <button class="btn-cancel" onclick="closeEditJadwal()">Batal</button>
-      <button class="btn-save" id="btnSaveJadwal" onclick="saveEditJadwal()">Simpan Perubahan</button>
+      <button class="btn-save" id="btnSaveEditJadwal" onclick="saveEditJadwal()">Simpan</button>
     </div>
   </div>
 </div>
@@ -507,16 +404,16 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, addDoc, deleteDoc, updateDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ── Firebase Config ──
 const firebaseConfig = {
-  apiKey: "AIzaSyAupEIJ7vyFPKDF8NzNSnOtWm32XUjucdE",
-  authDomain: "informasi-sidang-ki-jambi.firebaseapp.com",
-  projectId: "informasi-sidang-ki-jambi",
-  storageBucket: "informasi-sidang-ki-jambi.firebasestorage.app",
-  messagingSenderId: "216831525707",
-  appId: "1:216831525707:web:6ff8e84fa4ed6246b91ece"
+  apiKey: "AIzaSyBvlaW1M23w3dEGUJgJBBuMEP7YQ_hqDtY",
+  authDomain: "testing-jadwal-sidang.firebaseapp.com",
+  projectId: "testing-jadwal-sidang",
+  storageBucket: "testing-jadwal-sidang.firebasestorage.app",
+  messagingSenderId: "192307955600",
+  appId: "1:192307955600:web:67016ad181325841e69515"
 };
 
 const app  = initializeApp(firebaseConfig);
@@ -643,7 +540,7 @@ async function renderMajelis(main) {
       <div class="section-count" id="perkaraCount">–</div>
     </div>
     <div class="alert" id="dashAlert"></div>
-    <div class="cards-grid" id="perkaraGrid">
+    <div id="perkaraGrid">
       <div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><p>Memuat data...</p></div>
     </div>
   `;
@@ -654,18 +551,15 @@ async function loadPerkaraMajelis(namaMajelis) {
   const grid = document.getElementById('perkaraGrid');
   const countEl = document.getElementById('perkaraCount');
   try {
-    // Ambil jadwal dari Firestore collection 'jadwal_sidang'
     const snap = await getDocs(collection(db, 'jadwal_sidang'));
     const semua = [];
     snap.forEach(d => semua.push({ id: d.id, ...d.data() }));
 
-    // Filter perkara yang majelisnya termasuk user ini
     const filtered = semua.filter(j => {
       const majelis = (j.majelis || '').toLowerCase();
       return majelis.includes(namaMajelis.toLowerCase());
     });
 
-    // Deduplikasi per register
     const byRegister = {};
     filtered.forEach(j => {
       if (!byRegister[j.register]) byRegister[j.register] = [];
@@ -680,29 +574,52 @@ async function loadPerkaraMajelis(namaMajelis) {
       return;
     }
 
-    // Untuk tiap register, ambil catatan majelis
     const cards = await Promise.all(registers.map(async reg => {
-      const sidangList = byRegister[reg];
-      const latest = sidangList.sort((a,b) => new Date(b.tanggal) - new Date(a.tanggal))[0];
+      const sidangList = byRegister[reg].sort((a,b) => new Date(a.tanggal) - new Date(b.tanggal));
+      const latest = [...sidangList].sort((a,b) => new Date(b.tanggal) - new Date(a.tanggal))[0];
 
-      // Cek catatan majelis
+      // Catatan majelis untuk perkara ini
       const catatanSnap = await getDoc(doc(db, 'catatan_majelis', `${reg}_${currentUser.uid}`));
       const catatan = catatanSnap.exists() ? catatanSnap.data().isi : '';
 
+      // History sidang
+      const historyHtml = sidangList.map(s => `
+        <div style="display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="min-width:90px;font-size:12px;color:var(--text-muted)">${s.tanggal || '-'}<br>${s.jam || ''}</div>
+          <div>
+            <div style="font-size:13px;font-weight:600">${s.agenda || '-'}</div>
+            <div style="font-size:12px;color:var(--text-muted)">${s.catatan || ''}</div>
+          </div>
+        </div>
+      `).join('');
+
       return `
-        <div class="perkara-card">
+        <div class="perkara-card" style="margin-bottom:20px">
           <div class="perkara-card-header">
             <div class="perkara-register">${reg}</div>
             <div class="perkara-agenda">${latest.agenda || 'Sidang'}</div>
           </div>
           <div class="perkara-para">${latest.pemohon || '-'} <span style="color:var(--text-muted)">vs</span> ${latest.termohon || '-'}</div>
-          <div class="perkara-date">📅 ${latest.tanggal || '-'} &nbsp;🕐 ${latest.jam || '-'}</div>
-          <div class="perkara-catatan-preview ${catatan ? 'has-catatan' : ''}">
-            ${catatan ? catatan.substring(0,120) + (catatan.length > 120 ? '...' : '') : '<em style="color:var(--text-muted)">Belum ada catatan</em>'}
+          <div class="perkara-date">📅 Sidang terakhir: ${latest.tanggal || '-'} &nbsp;🕐 ${latest.jam || '-'}</div>
+
+          <!-- History Sidang -->
+          <div style="margin-top:16px">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">📅 Riwayat Sidang (${sidangList.length}x)</div>
+            <div style="background:var(--bg);border-radius:var(--radius-sm);padding:4px 12px;max-height:180px;overflow-y:auto">
+              ${historyHtml}
+            </div>
           </div>
-          <button class="btn-edit-catatan" onclick="openCatatanModal('${reg}', '${latest.pemohon||''} vs ${latest.termohon||''}', '${escapeJs(catatan)}', 'majelis')">
-            ${catatan ? '✏️ Edit Catatan' : '+ Tambah Catatan'}
-          </button>
+
+          <!-- Catatan Majelis -->
+          <div style="margin-top:16px">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">📝 Catatan Sidang Saya</div>
+            <div class="perkara-catatan-preview ${catatan ? 'has-catatan' : ''}">
+              ${catatan ? catatan.substring(0,150) + (catatan.length > 150 ? '...' : '') : '<em style="color:var(--text-muted)">Belum ada catatan</em>'}
+            </div>
+            <button class="btn-edit-catatan" style="margin-top:8px" onclick="openCatatanModal('${reg}', '${escapeJs(latest.pemohon||'')} vs ${escapeJs(latest.termohon||'')}', '${escapeJs(catatan)}', 'majelis')">
+              ${catatan ? '✏️ Edit Catatan' : '+ Tambah Catatan'}
+            </button>
+          </div>
         </div>
       `;
     }));
@@ -817,7 +734,7 @@ async function loadPerkaraPanitera(namaPanitera) {
 // ════════════════════════════════════
 // DASHBOARD PETUGAS
 // ════════════════════════════════════
-function renderPetugas(main) {
+async function renderPetugas(main) {
   main.innerHTML = `
     <div class="page-title">Dashboard Petugas</div>
     <div class="page-sub">Kelola jadwal sidang</div>
@@ -828,178 +745,224 @@ function renderPetugas(main) {
     </div>
     <div id="petugasContent"></div>
   `;
-  renderTambahJadwalForm();
+  renderFormTambahJadwal();
 }
 
 window.petugasTab = function(tab, el) {
   document.querySelectorAll('.petugas-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  if (tab === 'tambah') {
-    renderTambahJadwalForm();
-  } else {
-    loadPetugasJadwal();
-  }
+  if (tab === 'tambah') renderFormTambahJadwal();
+  else renderDaftarJadwalPetugas();
 };
 
-function renderTambahJadwalForm() {
+function formJadwalFields(data = {}) {
+  return `
+    <div class="form-row">
+      <div class="form-group-dash">
+        <label>Nomor Register *</label>
+        <input type="text" id="f_register" placeholder="001/KI-JBI/PSI/2026" value="${data.register||''}">
+      </div>
+      <div class="form-group-dash">
+        <label>Tanggal Sidang *</label>
+        <input type="date" id="f_tanggal" value="${data.tanggal||''}">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group-dash">
+        <label>Jam *</label>
+        <input type="time" id="f_jam" value="${data.jam||''}">
+      </div>
+      <div class="form-group-dash">
+        <label>Agenda *</label>
+        <select id="f_agenda">
+          <option value="">Pilih agenda...</option>
+          ${['Pemeriksaan Awal','Mediasi','Sidang Lanjutan','Putusan'].map(a => `<option ${data.agenda===a?'selected':''}>${a}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group-dash">
+        <label>Pemohon *</label>
+        <input type="text" id="f_pemohon" placeholder="Nama pemohon" value="${data.pemohon||''}">
+      </div>
+      <div class="form-group-dash">
+        <label>Termohon *</label>
+        <input type="text" id="f_termohon" placeholder="Nama termohon" value="${data.termohon||''}">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group-dash">
+        <label>Majelis (pisah koma)</label>
+        <input type="text" id="f_majelis" placeholder="Siti Masnidar, Ahmad Taufiq" value="${data.majelis||''}">
+      </div>
+      <div class="form-group-dash">
+        <label>Mediator</label>
+        <input type="text" id="f_mediator" placeholder="Nama mediator" value="${data.mediator||''}">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group-dash">
+        <label>Panitera Pengganti</label>
+        <input type="text" id="f_panitera" placeholder="Nama panitera" value="${data.panitera||''}">
+      </div>
+      <div class="form-group-dash">
+        <label>Status Perkara</label>
+        <select id="f_status">
+          <option value="">Pilih status...</option>
+          ${['Aktif','Mediasi','Putusan','Selesai'].map(s => `<option ${data.status===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group-dash">
+        <label>Link Putusan (Google Drive)</label>
+        <input type="text" id="f_link_putusan" placeholder="https://drive.google.com/..." value="${data.link_putusan||''}">
+      </div>
+    </div>
+    <div class="form-row single">
+      <div class="form-group-dash">
+        <label>Catatan</label>
+        <textarea id="f_catatan" rows="3" placeholder="Catatan tambahan (opsional)">${data.catatan||''}</textarea>
+      </div>
+    </div>
+  `;
+}
+
+function renderFormTambahJadwal() {
   document.getElementById('petugasContent').innerHTML = `
     <div class="alert" id="dashAlert"></div>
     <div class="form-card">
-      <div class="form-row">
-        <div class="form-group-dash">
-          <label>Nomor Register *</label>
-          <input type="text" id="f_register" placeholder="001/KI-JBI/PSI/2026">
-        </div>
-        <div class="form-group-dash">
-          <label>Tanggal Sidang *</label>
-          <input type="date" id="f_tanggal">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group-dash">
-          <label>Jam *</label>
-          <input type="time" id="f_jam">
-        </div>
-        <div class="form-group-dash">
-          <label>Agenda *</label>
-          <select id="f_agenda">
-            <option value="">Pilih agenda...</option>
-            <option>Pemeriksaan Awal</option>
-            <option>Mediasi</option>
-            <option>Sidang Lanjutan</option>
-            <option>Putusan</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group-dash">
-          <label>Pemohon *</label>
-          <input type="text" id="f_pemohon" placeholder="Nama pemohon">
-        </div>
-        <div class="form-group-dash">
-          <label>Termohon *</label>
-          <input type="text" id="f_termohon" placeholder="Nama termohon">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group-dash">
-          <label>Majelis (pisah koma)</label>
-          <input type="text" id="f_majelis" placeholder="Siti Masnidar, Ahmad Taufiq, Zamharir">
-        </div>
-        <div class="form-group-dash">
-          <label>Panitera</label>
-          <input type="text" id="f_panitera" placeholder="Nama panitera">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group-dash">
-          <label>Mediator</label>
-          <input type="text" id="f_mediator" placeholder="Nama mediator (jika ada)">
-        </div>
-        <div class="form-group-dash">
-          <label>Status Perkara</label>
-          <select id="f_status">
-            <option value="">Pilih status...</option>
-            <option value="ON PROSES">ON PROSES</option>
-            <option value="SELESAI">SELESAI</option>
-            <option value="DITARIK">DITARIK</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-row single">
-        <div class="form-group-dash">
-          <label>Link Putusan</label>
-          <input type="text" id="f_link_putusan" placeholder="https://... (opsional)">
-        </div>
-      </div>
-      <div class="form-row single">
-        <div class="form-group-dash">
-          <label>Catatan</label>
-          <textarea id="f_catatan" rows="3" placeholder="Catatan tambahan (opsional)"></textarea>
-        </div>
-      </div>
+      <div style="font-family:'Lora',serif;font-size:16px;font-weight:700;margin-bottom:16px">Tambah Jadwal Sidang Baru</div>
+      ${formJadwalFields()}
       <button class="btn-submit" id="btnSubmitJadwal" onclick="submitJadwal()">+ Tambah Jadwal</button>
     </div>
   `;
 }
 
-async function loadPetugasJadwal() {
+async function renderDaftarJadwalPetugas() {
   document.getElementById('petugasContent').innerHTML = `
     <div class="alert" id="dashAlert"></div>
-    <div class="table-wrap" id="petugasJadwalTable">
+    <div class="table-wrap" id="jadwalPetugasTable">
       <div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><p>Memuat...</p></div>
     </div>
   `;
   try {
-    const snap = await getDocs(collection(db, 'jadwal_sidang'));
+    const snap = await getDocs(query(collection(db, 'jadwal_sidang'), orderBy('tanggal', 'desc')));
     const jadwal = [];
     snap.forEach(d => jadwal.push({ id: d.id, ...d.data() }));
-    jadwal.sort((a,b) => new Date(b.tanggal) - new Date(a.tanggal));
     if (jadwal.length === 0) {
-      document.getElementById('petugasJadwalTable').innerHTML = `<div class="empty-state"><p>Belum ada jadwal.</p></div>`;
+      document.getElementById('jadwalPetugasTable').innerHTML = `<div class="empty-state"><p>Belum ada jadwal.</p></div>`;
       return;
     }
-    document.getElementById('petugasJadwalTable').innerHTML = `
+    document.getElementById('jadwalPetugasTable').innerHTML = `
       <table>
-        <thead><tr><th>Register</th><th>Tanggal</th><th>Agenda</th><th>Pemohon</th><th>Termohon</th><th>Majelis</th><th>Status</th><th>Aksi</th></tr></thead>
+        <thead><tr><th>Register</th><th>Tanggal</th><th>Agenda</th><th>Pemohon</th><th>Termohon</th><th>Aksi</th></tr></thead>
         <tbody>
           ${jadwal.map(j => `
             <tr>
-              <td><strong>${j.register}</strong></td>
-              <td>${j.tanggal || '-'} ${j.jam || ''}</td>
-              <td>${j.agenda || '-'}</td>
-              <td>${j.pemohon || '-'}</td>
-              <td>${j.termohon || '-'}</td>
-              <td style="font-size:12px;color:var(--text-secondary);max-width:160px">${j.majelis ? j.majelis.substring(0,50) + (j.majelis.length > 50 ? '...' : '') : '<em style="color:var(--text-muted)">–</em>'}</td>
-              <td><span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:10px;background:${j.status==='SELESAI'?'#f0fdf4':j.status==='DITARIK'?'#fef2f2':'#fef3c7'};color:${j.status==='SELESAI'?'#16a34a':j.status==='DITARIK'?'#dc2626':'#92400e'}">${j.status||'ON PROSES'}</span></td>
-              <td><button class="btn-edit" onclick="editJadwal('${j.id}')">✏️ Edit</button></td>
+              <td><strong>${j.register||'-'}</strong></td>
+              <td>${j.tanggal||'-'} ${j.jam||''}</td>
+              <td>${j.agenda||'-'}</td>
+              <td>${j.pemohon||'-'}</td>
+              <td>${j.termohon||'-'}</td>
+              <td><button class="btn-edit-jadwal" onclick="openEditJadwal('${j.id}')">✏️ Edit</button></td>
             </tr>
           `).join('')}
         </tbody>
       </table>
     `;
   } catch(e) {
-    document.getElementById('petugasJadwalTable').innerHTML = `<div class="empty-state"><p>Gagal memuat.</p></div>`;
+    document.getElementById('jadwalPetugasTable').innerHTML = `<div class="empty-state"><p>Gagal memuat: ${e.message}</p></div>`;
   }
 }
 
 window.submitJadwal = async function() {
   const btn = document.getElementById('btnSubmitJadwal');
-  const alert = document.getElementById('dashAlert');
-  const fields = ['f_register','f_tanggal','f_jam','f_agenda','f_pemohon','f_termohon'];
+  const required = ['f_register','f_tanggal','f_jam','f_agenda','f_pemohon','f_termohon'];
   const vals = {};
-  for (const f of fields) {
+  for (const f of required) {
     vals[f] = document.getElementById(f).value.trim();
-    if (!vals[f]) {
-      showAlert('error', 'Harap isi semua kolom yang wajib (*).');
-      return;
-    }
+    if (!vals[f]) { showAlert('error', 'Harap isi semua kolom yang wajib (*).'); return; }
   }
   btn.disabled = true; btn.textContent = 'Menyimpan...';
   try {
     await addDoc(collection(db, 'jadwal_sidang'), {
-      register: vals.f_register,
-      tanggal: vals.f_tanggal,
-      jam: vals.f_jam,
-      agenda: vals.f_agenda,
-      pemohon: vals.f_pemohon,
-      termohon: vals.f_termohon,
-      majelis: document.getElementById('f_majelis').value.trim(),
-      panitera: document.getElementById('f_panitera').value.trim(),
-      mediator: document.getElementById('f_mediator').value.trim(),
-      status: document.getElementById('f_status').value.trim(),
-      link_putusan: document.getElementById('f_link_putusan').value.trim(),
-      catatan: document.getElementById('f_catatan').value.trim(),
-      createdAt: new Date().toISOString(),
-      createdBy: currentUser.uid
+      register     : vals.f_register,
+      tanggal      : vals.f_tanggal,
+      jam          : vals.f_jam,
+      agenda       : vals.f_agenda,
+      pemohon      : vals.f_pemohon,
+      termohon     : vals.f_termohon,
+      majelis      : document.getElementById('f_majelis').value.trim(),
+      mediator     : document.getElementById('f_mediator').value.trim(),
+      panitera     : document.getElementById('f_panitera').value.trim(),
+      status       : document.getElementById('f_status').value.trim(),
+      link_putusan : document.getElementById('f_link_putusan').value.trim(),
+      catatan      : document.getElementById('f_catatan').value.trim(),
+      createdAt    : new Date().toISOString(),
+      createdBy    : currentUser.uid
     });
     showAlert('success', '✓ Jadwal berhasil ditambahkan!');
-    ['f_register','f_tanggal','f_jam','f_agenda','f_pemohon','f_termohon','f_majelis','f_panitera','f_mediator','f_link_putusan','f_catatan'].forEach(f => document.getElementById(f).value = '');
-    document.getElementById('f_status').value = '';
+    ['f_register','f_tanggal','f_jam','f_agenda','f_pemohon','f_termohon','f_majelis','f_mediator','f_panitera','f_status','f_link_putusan','f_catatan']
+      .forEach(f => document.getElementById(f).value = '');
   } catch(e) {
     showAlert('error', 'Gagal menyimpan: ' + e.message);
   }
   btn.disabled = false; btn.textContent = '+ Tambah Jadwal';
+};
+
+// Edit jadwal (petugas & admin)
+let _editJadwalId = null;
+window.openEditJadwal = async function(id) {
+  _editJadwalId = id;
+  const d = await getDoc(doc(db, 'jadwal_sidang', id));
+  if (!d.exists()) return;
+  const data = d.data();
+  document.getElementById('editJadwalModal').classList.add('open');
+  document.getElementById('editJadwalBody').innerHTML = formJadwalFields(data);
+};
+
+window.closeEditJadwal = function() {
+  document.getElementById('editJadwalModal').classList.remove('open');
+  _editJadwalId = null;
+};
+
+window.saveEditJadwal = async function() {
+  if (!_editJadwalId) return;
+  const btn = document.getElementById('btnSaveEditJadwal');
+  const required = ['f_register','f_tanggal','f_jam','f_agenda','f_pemohon','f_termohon'];
+  for (const f of required) {
+    if (!document.getElementById(f).value.trim()) {
+      alert('Harap isi semua kolom yang wajib (*).'); return;
+    }
+  }
+  btn.disabled = true; btn.textContent = 'Menyimpan...';
+  try {
+    await updateDoc(doc(db, 'jadwal_sidang', _editJadwalId), {
+      register     : document.getElementById('f_register').value.trim(),
+      tanggal      : document.getElementById('f_tanggal').value.trim(),
+      jam          : document.getElementById('f_jam').value.trim(),
+      agenda       : document.getElementById('f_agenda').value.trim(),
+      pemohon      : document.getElementById('f_pemohon').value.trim(),
+      termohon     : document.getElementById('f_termohon').value.trim(),
+      majelis      : document.getElementById('f_majelis').value.trim(),
+      mediator     : document.getElementById('f_mediator').value.trim(),
+      panitera     : document.getElementById('f_panitera').value.trim(),
+      status       : document.getElementById('f_status').value.trim(),
+      link_putusan : document.getElementById('f_link_putusan').value.trim(),
+      catatan      : document.getElementById('f_catatan').value.trim(),
+      updatedAt    : new Date().toISOString(),
+      updatedBy    : currentUser.uid
+    });
+    closeEditJadwal();
+    // Refresh tabel yang sedang aktif
+    const activeTab = document.querySelector('.petugas-tab.active, .admin-tab.active');
+    if (activeTab) activeTab.click();
+    else await renderDaftarJadwalPetugas();
+  } catch(e) {
+    alert('Gagal menyimpan: ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = 'Simpan';
 };
 
 // ════════════════════════════════════
@@ -1134,171 +1097,45 @@ window.deleteUser = async function(uid, nama) {
   }
 };
 
-let _allJadwal = []; // cache semua data untuk filter
-
 async function loadAdminJadwal() {
   const cont = document.getElementById('adminContent');
-  cont.innerHTML = `
-    <div class="alert" id="adminAlert"></div>
-    <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
-      <div class="form-group-dash" style="margin:0;flex:1;min-width:160px">
-        <input type="date" id="filterTanggal" placeholder="Filter tanggal..." style="padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;width:100%">
-      </div>
-      <button onclick="applyFilterTanggal()" style="padding:8px 18px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Filter</button>
-      <button onclick="resetFilterTanggal()" style="padding:8px 14px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;color:var(--text-secondary)">Reset</button>
-      <button onclick="hapusSemuaTanggalFilter()" style="padding:8px 14px;background:var(--danger-light);color:var(--danger);border:1px solid #fecaca;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">🗑️ Hapus Semua Tanggal Ini</button>
-    </div>
-    <div class="table-wrap" id="jadwalTable"><div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><p>Memuat...</p></div></div>`;
+  cont.innerHTML = `<div class="alert" id="adminAlert"></div><div class="table-wrap" id="jadwalTable"><div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><p>Memuat...</p></div></div>`;
   try {
     const snap = await getDocs(collection(db, 'jadwal_sidang'));
-    _allJadwal = [];
-    snap.forEach(d => _allJadwal.push({ id: d.id, ...d.data() }));
-    _allJadwal.sort((a,b) => new Date(b.tanggal) - new Date(a.tanggal));
-    renderJadwalTable(_allJadwal);
+    const jadwal = [];
+    snap.forEach(d => jadwal.push({ id: d.id, ...d.data() }));
+    jadwal.sort((a,b) => new Date(b.tanggal) - new Date(a.tanggal));
+    if (jadwal.length === 0) {
+      document.getElementById('jadwalTable').innerHTML = `<div class="empty-state"><p>Belum ada jadwal di Firestore.</p></div>`;
+      return;
+    }
+    document.getElementById('jadwalTable').innerHTML = `
+      <table>
+        <thead><tr><th>Register</th><th>Tanggal</th><th>Agenda</th><th>Pemohon</th><th>Termohon</th><th>Aksi</th></tr></thead>
+        <tbody>
+          ${jadwal.map(j => `
+            <tr>
+              <td><strong>${j.register}</strong></td>
+              <td>${j.tanggal || '-'} ${j.jam || ''}</td>
+              <td>${j.agenda || '-'}</td>
+              <td>${j.pemohon || '-'}</td>
+              <td>${j.termohon || '-'}</td>
+              <td><button class="btn-edit-jadwal" onclick="openEditJadwal('${j.id}')">✏️ Edit</button><button class="btn-del" onclick="deleteJadwal('${j.id}')">Hapus</button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
   } catch(e) {
     document.getElementById('jadwalTable').innerHTML = `<div class="empty-state"><p>Gagal memuat.</p></div>`;
   }
 }
-
-function renderJadwalTable(jadwal) {
-  if (jadwal.length === 0) {
-    document.getElementById('jadwalTable').innerHTML = `<div class="empty-state"><p>Tidak ada data untuk filter ini.</p></div>`;
-    return;
-  }
-  document.getElementById('jadwalTable').innerHTML = `
-    <table>
-      <thead><tr><th>Register</th><th>Tanggal</th><th>Agenda</th><th>Pemohon</th><th>Termohon</th><th>Majelis</th><th>Status</th><th>Aksi</th></tr></thead>
-      <tbody>
-        ${jadwal.map(j => `
-          <tr>
-            <td><strong>${j.register || '-'}</strong></td>
-            <td>${j.tanggal || '-'} ${j.jam || ''}</td>
-            <td>${j.agenda || '-'}</td>
-            <td>${j.pemohon || '-'}</td>
-            <td>${j.termohon || '-'}</td>
-            <td style="font-size:12px;color:var(--text-secondary);max-width:180px">${j.majelis ? j.majelis.substring(0,60) + (j.majelis.length > 60 ? '...' : '') : '<em style="color:var(--text-muted)">–</em>'}</td>
-            <td><span style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:10px;background:${j.status==='SELESAI'?'#f0fdf4':j.status==='DITARIK'?'#fef2f2':'#fef3c7'};color:${j.status==='SELESAI'?'#16a34a':j.status==='DITARIK'?'#dc2626':'#92400e'}">${j.status||'ON PROSES'}</span></td>
-            <td><button class="btn-edit" onclick="editJadwal('${j.id}')">✏️ Edit</button><button class="btn-del" onclick="deleteJadwal('${j.id}')">Hapus</button></td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-  `;
-}
-
-window.applyFilterTanggal = function() {
-  const val = document.getElementById('filterTanggal').value;
-  if (!val) { showAdminAlert('error', 'Pilih tanggal dulu untuk difilter.'); return; }
-  const filtered = _allJadwal.filter(j => j.tanggal === val);
-  renderJadwalTable(filtered);
-  if (filtered.length === 0) {
-    showAdminAlert('success', `Tidak ada data untuk tanggal ${val}.`);
-  } else {
-    showAdminAlert('success', `Menampilkan ${filtered.length} data untuk tanggal ${val}. Kamu bisa hapus satu-satu atau pakai tombol "Hapus Semua Tanggal Ini".`);
-  }
-};
-
-window.resetFilterTanggal = function() {
-  document.getElementById('filterTanggal').value = '';
-  renderJadwalTable(_allJadwal);
-};
-
-window.hapusSemuaTanggalFilter = async function() {
-  const val = document.getElementById('filterTanggal').value;
-  if (!val) { showAdminAlert('error', 'Pilih tanggal dulu sebelum hapus massal.'); return; }
-  const toDelete = _allJadwal.filter(j => j.tanggal === val);
-  if (toDelete.length === 0) { showAdminAlert('error', 'Tidak ada data untuk tanggal tersebut.'); return; }
-  if (!confirm(`Hapus SEMUA ${toDelete.length} jadwal pada tanggal ${val}? Tindakan ini tidak bisa dibatalkan.`)) return;
-  try {
-    await Promise.all(toDelete.map(j => deleteDoc(doc(db, 'jadwal_sidang', j.id))));
-    showAdminAlert('success', `✓ ${toDelete.length} jadwal pada tanggal ${val} berhasil dihapus.`);
-    await loadAdminJadwal();
-  } catch(e) {
-    showAdminAlert('error', 'Gagal hapus: ' + e.message);
-  }
-};
 
 window.deleteJadwal = async function(id) {
   if (!confirm('Hapus jadwal ini?')) return;
   await deleteDoc(doc(db, 'jadwal_sidang', id));
   showAdminAlert('success', '✓ Jadwal dihapus.');
   await loadAdminJadwal();
-};
-
-window.editJadwal = async function(id) {
-  try {
-    const snap = await getDoc(doc(db, 'jadwal_sidang', id));
-    if (!snap.exists()) { alert('Data tidak ditemukan.'); return; }
-    const d = snap.data();
-    document.getElementById('ej_id').value = id;
-    document.getElementById('ej_register').value = d.register || '';
-    document.getElementById('ej_tanggal').value = d.tanggal || '';
-    document.getElementById('ej_jam').value = d.jam || '';
-    document.getElementById('ej_agenda').value = d.agenda || '';
-    document.getElementById('ej_pemohon').value = d.pemohon || '';
-    document.getElementById('ej_termohon').value = d.termohon || '';
-    document.getElementById('ej_majelis').value = d.majelis || '';
-    document.getElementById('ej_panitera').value = d.panitera || '';
-    document.getElementById('ej_mediator').value = d.mediator || '';
-    document.getElementById('ej_status').value = d.status || '';
-    document.getElementById('ej_link_putusan').value = d.link_putusan || '';
-    document.getElementById('ej_catatan').value = d.catatan || '';
-    document.getElementById('editJadwalSub').textContent = d.register || id;
-    document.getElementById('editJadwalStatus').style.display = 'none';
-    document.getElementById('editJadwalModal').classList.add('open');
-  } catch(e) {
-    alert('Gagal memuat data: ' + e.message);
-  }
-};
-
-window.closeEditJadwal = function() {
-  document.getElementById('editJadwalModal').classList.remove('open');
-};
-
-window.saveEditJadwal = async function() {
-  const btn = document.getElementById('btnSaveJadwal');
-  const id = document.getElementById('ej_id').value;
-  const requiredFields = ['ej_register','ej_tanggal','ej_jam','ej_agenda','ej_pemohon','ej_termohon'];
-  for (const f of requiredFields) {
-    if (!document.getElementById(f).value.trim()) {
-      alert('Harap isi semua kolom yang wajib (*).');
-      return;
-    }
-  }
-  btn.disabled = true; btn.textContent = 'Menyimpan...';
-  try {
-    await setDoc(doc(db, 'jadwal_sidang', id), {
-      register: document.getElementById('ej_register').value.trim(),
-      tanggal:  document.getElementById('ej_tanggal').value.trim(),
-      jam:      document.getElementById('ej_jam').value.trim(),
-      agenda:   document.getElementById('ej_agenda').value.trim(),
-      pemohon:  document.getElementById('ej_pemohon').value.trim(),
-      termohon: document.getElementById('ej_termohon').value.trim(),
-      majelis:  document.getElementById('ej_majelis').value.trim(),
-      panitera: document.getElementById('ej_panitera').value.trim(),
-      mediator: document.getElementById('ej_mediator').value.trim(),
-      status:   document.getElementById('ej_status').value.trim(),
-      link_putusan: document.getElementById('ej_link_putusan').value.trim(),
-      catatan:  document.getElementById('ej_catatan').value.trim(),
-      updatedAt: new Date().toISOString(),
-      updatedBy: currentUser.uid
-    }, { merge: true });
-    document.getElementById('editJadwalStatus').style.display = 'flex';
-    btn.textContent = 'Simpan Perubahan';
-    btn.disabled = false;
-    setTimeout(() => {
-      document.getElementById('editJadwalStatus').style.display = 'none';
-      window.closeEditJadwal();
-      // Refresh tabel yang sedang aktif
-      const role = currentUserData.role;
-      if (role === 'admin') loadAdminJadwal();
-      else loadPetugasJadwal();
-    }, 1500);
-  } catch(e) {
-    btn.textContent = 'Simpan Perubahan';
-    btn.disabled = false;
-    alert('Gagal menyimpan: ' + e.message);
-  }
 };
 
 async function loadAdminCatatan() {
