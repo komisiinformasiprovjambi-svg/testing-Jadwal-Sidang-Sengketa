@@ -989,17 +989,39 @@ async function renderAdmin(main) {
   main.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
       <div class="page-title">Dashboard Admin</div>
-      <a href="index.html" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--accent-light);color:var(--accent);border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;transition:background 0.2s" onmouseover="this.style.background='#c8dece'" onmouseout="this.style.background='var(--accent-light)'">← Jadwal Publik</a>
+      <a href="index.html" style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--accent-light);color:var(--accent);border-radius:20px;font-size:13px;font-weight:600;text-decoration:none">← Jadwal Publik</a>
     </div>
     <div class="page-sub">Kelola seluruh data sistem</div>
     <span class="role-badge admin">🔑 Administrator</span>
     <div class="admin-tabs">
-      <div class="admin-tab active" onclick="window.__tabUsers(this)">👥 Kelola User</div>
-      <div class="admin-tab" onclick="window.__tabJadwal(this)">📅 Jadwal Sidang</div>
-      <div class="admin-tab" onclick="window.__tabCatatan(this)">📝 Semua Catatan</div>
+      <div class="admin-tab active" id="atab-users">👥 Kelola User</div>
+      <div class="admin-tab" id="atab-jadwal">📅 Jadwal Sidang</div>
+      <div class="admin-tab" id="atab-catatan">📝 Semua Catatan</div>
     </div>
     <div id="adminContent"></div>
   `;
+
+  // Attach listeners langsung dalam module scope — paling reliable
+  const tabMap = {
+    'atab-users':   loadAdminUsers,
+    'atab-jadwal':  loadAdminJadwal,
+    'atab-catatan': loadAdminCatatan
+  };
+  document.querySelectorAll('.admin-tab').forEach(tab => {
+    tab.style.cursor = 'pointer';
+    tab.addEventListener('click', async function() {
+      document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+      this.classList.add('active');
+      const cont = document.getElementById('adminContent');
+      cont.innerHTML = '<div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><p>Memuat...</p></div>';
+      try {
+        await tabMap[this.id]();
+      } catch(e) {
+        cont.innerHTML = '<div class="empty-state"><p>⚠️ ' + e.message + '</p></div>';
+      }
+    });
+  });
+
   await loadAdminUsers();
 }
 
