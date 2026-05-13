@@ -272,6 +272,7 @@
   .btn-edit-jadwal:hover { background: #c8dece; }
   #editJadwalModal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center; padding:16px; }
   #editJadwalModal.open { display:flex; }
+  #detailPerkaraModal { display:none; }
   #detailPerkaraModal.open { display:flex; }
   .edit-jadwal-card { background:var(--surface); border-radius:var(--radius); width:100%; max-width:620px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-lg); }
   .edit-jadwal-head { padding:20px 24px 16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
@@ -387,7 +388,7 @@
 </div>
 
 <!-- MODAL DETAIL PERKARA -->
-<div id="detailPerkaraModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center;padding:16px">
+<div id="detailPerkaraModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center;padding:16px">
   <div style="background:var(--surface);border-radius:var(--radius);width:100%;max-width:680px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg)">
     <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--surface);z-index:1">
       <div>
@@ -1318,42 +1319,116 @@ window.deleteJadwal = async function(id) {
 
 async function loadAdminCatatan() {
   const cont = document.getElementById('adminContent');
-  cont.innerHTML = `<div class="alert" id="adminAlert"></div><div id="catatanList"><div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><p>Memuat...</p></div></div>`;
+  cont.innerHTML = `
+    <div class="alert" id="adminAlert"></div>
+    <div style="background:var(--surface);border-radius:var(--radius);border:1.5px solid var(--border);padding:20px;margin-bottom:20px">
+      <div style="font-family:'Lora',serif;font-size:15px;font-weight:700;margin-bottom:14px">➕ Tambah Catatan per Perkara</div>
+      <div class="form-row">
+        <div class="form-group-dash">
+          <label>Nomor Register *</label>
+          <input type="text" id="cn_register" placeholder="001/KI-JBI/PSI/2026">
+        </div>
+        <div class="form-group-dash">
+          <label>Jenis Catatan *</label>
+          <select id="cn_tipe">
+            <option value="panitera">Catatan Panitera (publik)</option>
+            <option value="majelis">Catatan Majelis (hanya admin & majelis)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row single">
+        <div class="form-group-dash">
+          <label>Isi Catatan *</label>
+          <textarea id="cn_isi" rows="3" placeholder="Tulis catatan di sini..."></textarea>
+        </div>
+      </div>
+      <button class="btn-submit" style="padding:10px 24px;font-size:14px" onclick="adminTambahCatatanBaru()">💾 Simpan Catatan</button>
+    </div>
+    <div id="catatanList"><div class="empty-state"><div class="spinner" style="margin:0 auto 12px"></div><p>Memuat...</p></div></div>
+  `;
+  await refreshAdminCatatanList();
+}
+
+async function refreshAdminCatatanList() {
   try {
     const [majelisSnap, paniteraSnap] = await Promise.all([
       getDocs(collection(db, 'catatan_majelis')),
       getDocs(collection(db, 'catatan_panitera'))
     ]);
     let html = '';
-    if (majelisSnap.empty && paniteraSnap.empty) {
-      document.getElementById('catatanList').innerHTML = `<div class="empty-state"><p>Belum ada catatan.</p></div>`;
-      return;
+
+    // Catatan Majelis
+    html += `<div style="font-family:'Lora',serif;font-size:15px;font-weight:700;margin-bottom:12px">⚖️ Catatan Majelis</div>`;
+    if (majelisSnap.empty) {
+      html += `<div class="empty-state" style="padding:24px"><p>Belum ada catatan majelis.</p></div>`;
+    } else {
+      html += `<div class="cards-grid">`;
+      majelisSnap.forEach(d => {
+        const data = d.data();
+        html += `<div class="perkara-card">
+          <div class="perkara-register">${data.register || d.id.split('_')[0]}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin:4px 0">${data.namaMajelis || '–'}</div>
+          <div class="perkara-catatan-preview has-catatan">${data.isi || '-'}</div>
+          <button class="btn-edit-catatan" style="margin-top:10px" onclick="adminEditCatatan('majelis','${d.id}','${escapeJs(data.isi||'')}','${escapeJs(data.register||'')}')">✏️ Edit</button>
+        </div>`;
+      });
+      html += `</div>`;
     }
-    html += `<div style="font-family:'Lora',serif;font-size:15px;font-weight:700;margin-bottom:12px">Catatan Majelis</div><div class="cards-grid">`;
-    majelisSnap.forEach(d => {
-      const data = d.data();
-      html += `<div class="perkara-card">
-        <div class="perkara-register">${data.register || d.id.split('_')[0]}</div>
-        <div style="font-size:12px;color:var(--text-muted);margin:4px 0">${data.namaMajelis || '–'}</div>
-        <div class="perkara-catatan-preview has-catatan">${data.isi || '-'}</div>
-        <button class="btn-edit-catatan" style="margin-top:10px" onclick="adminEditCatatan('majelis','${d.id}','${escapeJs(data.isi||'')}','${escapeJs(data.register||'')}')">✏️ Edit</button>
-      </div>`;
-    });
-    html += `</div><div style="font-family:'Lora',serif;font-size:15px;font-weight:700;margin:24px 0 12px">Catatan Panitera</div><div class="cards-grid">`;
-    paniteraSnap.forEach(d => {
-      const data = d.data();
-      html += `<div class="perkara-card">
-        <div class="perkara-register">${d.id}</div>
-        <div class="perkara-catatan-preview has-catatan">${data.isi || '-'}</div>
-        <button class="btn-edit-catatan" style="margin-top:10px" onclick="adminEditCatatan('panitera','${d.id}','${escapeJs(data.isi||'')}','${d.id}')">✏️ Edit</button>
-      </div>`;
-    });
-    html += '</div>';
+
+    // Catatan Panitera
+    html += `<div style="font-family:'Lora',serif;font-size:15px;font-weight:700;margin:24px 0 12px">📝 Catatan Panitera</div>`;
+    if (paniteraSnap.empty) {
+      html += `<div class="empty-state" style="padding:24px"><p>Belum ada catatan panitera.</p></div>`;
+    } else {
+      html += `<div class="cards-grid">`;
+      paniteraSnap.forEach(d => {
+        const data = d.data();
+        html += `<div class="perkara-card">
+          <div class="perkara-register">${d.id}</div>
+          <div class="perkara-catatan-preview has-catatan">${data.isi || '-'}</div>
+          <button class="btn-edit-catatan" style="margin-top:10px" onclick="adminEditCatatan('panitera','${d.id}','${escapeJs(data.isi||'')}','${d.id}')">✏️ Edit</button>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
     document.getElementById('catatanList').innerHTML = html;
   } catch(e) {
-    document.getElementById('catatanList').innerHTML = `<div class="empty-state"><p>Gagal memuat catatan.</p></div>`;
+    document.getElementById('catatanList').innerHTML = `<div class="empty-state"><p>Gagal memuat catatan: ${e.message}</p></div>`;
   }
 }
+
+window.adminTambahCatatanBaru = async function() {
+  const register = document.getElementById('cn_register').value.trim();
+  const tipe     = document.getElementById('cn_tipe').value;
+  const isi      = document.getElementById('cn_isi').value.trim();
+  if (!register || !isi) { showAdminAlert('error', 'Register dan isi catatan wajib diisi.'); return; }
+
+  try {
+    if (tipe === 'panitera') {
+      await setDoc(doc(db, 'catatan_panitera', register), {
+        isi, register,
+        namaPanitera: currentUserData.nama,
+        uid: currentUser.uid,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    } else {
+      const docId = `${register}_${currentUser.uid}`;
+      await setDoc(doc(db, 'catatan_majelis', docId), {
+        isi, register,
+        namaMajelis: currentUserData.nama,
+        uid: currentUser.uid,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+    }
+    showAdminAlert('success', `✓ Catatan ${tipe} untuk ${register} berhasil disimpan!`);
+    document.getElementById('cn_register').value = '';
+    document.getElementById('cn_isi').value = '';
+    await refreshAdminCatatanList();
+  } catch(e) {
+    showAdminAlert('error', 'Gagal menyimpan: ' + e.message);
+  }
+};
 
 window.adminEditCatatan = function(tipe, docId, isi, register) {
   editingDocId = { tipe, docId, register };
